@@ -13,6 +13,6 @@
 //  change it any time WITHOUT rebuilding the app.
 // ─────────────────────────────────────────────────────────────────────────
 window.SMOQUIT_CONFIG = {
-  SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
+  SUPABASE_URL: "https://bzzdmxiykbrvwlyimagu.supabase.co",
   SUPABASE_ANON_KEY: "YOUR-ANON-PUBLIC-KEY",
 };
