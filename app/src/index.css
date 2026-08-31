@@ -1,0 +1,23 @@
+*  { box-sizing: border-box; }
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: #f5f3ee; /* colors.breath */
+  -webkit-font-smoothing: antialiased;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Form controls do not inherit the page font on their own. */
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}

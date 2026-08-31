@@ -31,7 +31,9 @@ Two things still need doing:
      live site by being merged.
    - Deploying by hand instead? Upload the CONTENTS of this folder
      (index.html, assets/, config.js, storage-health.js, version.js,
-     _redirects, _headers — all of it), not the folder.
+     _redirects, _headers — all of it), not the folder. Not app/ — that is
+     the source the bundle in assets/ is built from, and the site does not
+     read it.
    - _redirects keeps deep links working on a single-page app, and _headers
      stops the browser caching the runtime files. Cloudflare Pages reads both
      natively, and so does Netlify — the syntax is identical — so moving
@@ -104,11 +106,81 @@ error banner.
 There is a language switch at the bottom of the sign-in screen too — that
 one is remembered in the browser only, since nobody is signed in yet.
 
-The translations live in the built bundle under assets/, not in a runtime
-file, so changing wording means a rebuild — unlike config.js or version.js.
+The translations live in app/src/i18n/he.js and end up inside the bundle, so
+changing wording means a rebuild — unlike config.js or version.js. Note that
+the ENGLISH STRING IS THE KEY: edit an English sentence and you must re-key
+its Hebrew to match, or the sentence goes untranslated. The build checks
+this for you and refuses to finish otherwise.
+
 Anything stored in the database (trigger names, product names, country
 codes) deliberately stays English, so switching language never rewrites
 your history.
+
+
+WHERE THE CODE LIVES, AND HOW TO CHANGE IT
+------------------------------------------
+The site is this folder. Cloudflare Pages serves it directly, with NO build
+command set in the dashboard — leave it that way. index.html and assets/ are
+generated, and they are committed on purpose, because that is what gets
+served.
+
+The source they are generated from is in app/:
+
+    cd app
+    npm install
+    npm run build      # rewrites ../index.html and ../assets/
+    npm test           # drives the app in a browser and checks it works
+    npm run lint
+
+`npm run build` is the only thing that should ever write to index.html or
+assets/. It refuses to finish if the result is not deployable — see below.
+EDIT app/src, RUN THE BUILD, AND COMMIT BOTH. Committing a change to app/src
+without the rebuilt output leaves the live site on the old code, silently;
+the version number in the corner is how you notice.
+
+What the build will not touch: config.js, version.js, storage-health.js,
+_headers, _redirects. Those stay plain files you edit and upload directly,
+with no rebuild — that is the whole point of them, and the build checks
+afterwards that they are still there and unchanged.
+
+Three guards run as part of every build, and any of them failing stops it:
+
+  scripts/check-output.mjs   The generated index.html still loads config.js,
+                             storage-health.js and version.js, in that order,
+                             in the body, BEFORE the module bundle. That
+                             ordering is the only reason the app can read
+                             your Supabase keys — the bundle is a module, so
+                             it is deferred and runs last. Also checks the
+                             language script that runs before the first
+                             paint, and that the files above are untouched.
+
+  scripts/check-i18n.mjs     Every English string the app shows has a Hebrew
+                             translation, and nothing in the dictionary has
+                             gone orphaned. Because the English string IS the
+                             translation key, editing English wording is also
+                             a key change; this is what stops that from
+                             quietly untranslating a sentence.
+
+  eslint                     Mostly for one rule: a reference to a name that
+                             does not exist. The bundler will happily ship
+                             that and throw when somebody opens the screen.
+
+TESTS
+-----
+`npm test` runs the app in a real browser against a stand-in for Supabase —
+no test account, no network, and no chance of writing to anybody's real
+history. It covers logging a cigarette, tagging it, correcting its time,
+undo, the goal and settings forms, switching to Hebrew, and every tab
+loading without throwing.
+
+There is a second suite, tests/equivalence.spec.mjs, that compares the
+rebuilt app against the previously deployed bundle screen by screen. It only
+runs when you point it at a copy of that old build:
+
+    SMOQUIT_OLD_BUILD=/path/to/old npx playwright test
+
+It was written to prove that recovering the source from the shipped bundle
+changed nothing, and it can be deleted once that is old news.
 
 
 BUMP THE VERSION NUMBER BEFORE EVERY UPLOAD
