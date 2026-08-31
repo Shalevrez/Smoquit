@@ -27,6 +27,9 @@ test.afterAll(async () => {
 /**
  * Loads the app against the stand-in Supabase, at a fixed moment.
  *
+ * `hash` is how an email link arrives: Supabase puts the token, the link
+ * type and any failure in the fragment, and the app reads them on boot.
+ *
  * `controlClock` swaps the frozen clock for a fake one that only moves when
  * a test says so, which is how anything with a five-minute timer gets
  * tested in a second. It has to be pumped once after navigation: with the
@@ -44,9 +47,11 @@ async function open(page, opts = {}) {
   );
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto(`http://localhost:${PORT}/`);
+  await page.goto(`http://localhost:${PORT}/${opts.hash ?? ""}`);
   if (opts.controlClock) await page.clock.runFor(2000);
-  if (opts.signedIn !== false) await expect(page.locator("nav")).toBeVisible();
+  // A recovery link lands on the new-password screen, signed in or not, so
+  // waiting for the app's nav there would wait forever.
+  if (opts.signedIn !== false && !opts.hash) await expect(page.locator("nav")).toBeVisible();
   return {
     errors,
     writes,
@@ -185,6 +190,77 @@ test("the login screen only offers providers that are switched on", async ({ pag
   await open(page, { signedIn: false, providers: { google: true, apple: false } });
   await expect(page.getByRole("button", { name: /Continue with Google/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Continue with Apple/ })).toHaveCount(0);
+});
+
+test("the reset form asks for an address, and nothing else", async ({ page }) => {
+  await open(page, { signedIn: false });
+  await page.getByRole("button", { name: /Forgot your password/ }).click();
+
+  await expect(page.getByRole("button", { name: "Send reset link" })).toBeVisible();
+  // Nothing to type a password into, and no social buttons: neither has
+  // anything to do with getting a link into an inbox.
+  await expect(page.locator("input[type=password]")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Continue with/ })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Back to sign in" }).click();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(page.locator("input[type=password]")).toHaveCount(1);
+});
+
+test("a reset request never says whether the address has an account", async ({ page }) => {
+  await open(page, { signedIn: false });
+  await page.getByRole("button", { name: /Forgot your password/ }).click();
+  await page.locator("input[type=email]").fill("nobody@example.com");
+  await page.getByRole("button", { name: "Send reset link" }).click();
+  await expect(page.getByText(/If that address has an account/)).toBeVisible();
+});
+
+test("a reset link opens the new-password screen, not the app", async ({ page }) => {
+  // Signed in, which normally means the app — but this session came from a
+  // reset link, so the forgotten password has to be replaced first.
+  await open(page, {
+    signedIn: true,
+    hash: "#access_token=stand-in&refresh_token=stand-in&type=recovery",
+  });
+  await expect(page.getByText("Choose a new password.")).toBeVisible();
+  await expect(page.locator("nav")).toHaveCount(0);
+
+  // The two boxes have to agree, and be long enough to be worth having.
+  await page.locator("input[type=password]").first().fill("abc");
+  await page.locator("input[type=password]").nth(1).fill("abc");
+  await page.getByRole("button", { name: "Save new password" }).click();
+  await expect(page.getByText("Pick a password of at least 6 characters.")).toBeVisible();
+
+  await page.locator("input[type=password]").first().fill("a-longer-one");
+  await page.locator("input[type=password]").nth(1).fill("a-different-one");
+  await page.getByRole("button", { name: "Save new password" }).click();
+  await expect(page.getByText("The two passwords don't match.")).toBeVisible();
+
+  await page.locator("input[type=password]").nth(1).fill("a-longer-one");
+  await page.getByRole("button", { name: "Save new password" }).click();
+  await expect(page.getByText("Password changed. Opening the app…")).toBeVisible();
+  // And then it gets out of the way.
+  await expect(page.locator("nav")).toBeVisible();
+});
+
+test("a stale link says so instead of showing a blank form", async ({ page }) => {
+  await open(page, {
+    signedIn: false,
+    hash: "#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired",
+  });
+  await expect(page.getByText(/That link didn't work/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+});
+
+test("the reset screens read right-to-left in Hebrew", async ({ page }) => {
+  await open(page, {
+    signedIn: true,
+    lang: "he",
+    hash: "#access_token=stand-in&type=recovery",
+  });
+  await expect(page.getByText("בחרו סיסמה חדשה.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "שמירת הסיסמה החדשה" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 });
 
 test("no screen throws", async ({ page }) => {

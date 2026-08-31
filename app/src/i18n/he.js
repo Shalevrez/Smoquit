@@ -35,6 +35,24 @@ export const SQ_HE = {
   "New here? Create an account": "חדשים כאן? יצירת חשבון",
   "Check your email to confirm your account, then sign in.":
     "שלחנו לכם מייל לאישור החשבון — אשרו אותו ואז היכנסו.",
+  "Forgot your password?": "שכחתם את הסיסמה?",
+  "Back to sign in": "חזרה למסך הכניסה",
+  "Send reset link": "שליחת קישור לאיפוס",
+  "Enter your email and we'll send you a link to set a new password.":
+    "הזינו את כתובת הדוא״ל ונשלח לכם קישור לקביעת סיסמה חדשה.",
+  "If that address has an account, a reset link is on its way. It works once, and expires in an hour.":
+    "אם קיים חשבון עם הכתובת הזו, קישור לאיפוס בדרך. הקישור פועל פעם אחת, ופג תוקף בתוך שעה.",
+  "This account hasn't been confirmed yet. Open the confirmation link in the email we sent you.":
+    "החשבון עדיין לא אושר. פתחו את קישור האישור במייל ששלחנו לכם.",
+  "That link didn't work — it may have expired or already been used. Ask for a new one.":
+    "הקישור לא עבד — ייתכן שפג תוקפו או שכבר נעשה בו שימוש. בקשו קישור חדש.",
+  "Choose a new password.": "בחרו סיסמה חדשה.",
+  "New password": "סיסמה חדשה",
+  "Repeat new password": "אימות הסיסמה החדשה",
+  "Save new password": "שמירת הסיסמה החדשה",
+  "Pick a password of at least 6 characters.": "בחרו סיסמה באורך 6 תווים לפחות.",
+  "The two passwords don't match.": "שתי הסיסמאות אינן זהות.",
+  "Password changed. Opening the app…": "הסיסמה שונתה. פותחים את האפליקציה…",
   "Something went wrong.": "משהו השתבש.",
   "That sign-in option isn't switched on for this app yet. Use your email and password below.":
     "אפשרות ההתחברות הזו עדיין לא מופעלת באפליקציה. השתמשו בדוא״ל ובסיסמה שלמטה.",

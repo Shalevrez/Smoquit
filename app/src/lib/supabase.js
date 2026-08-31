@@ -15,6 +15,10 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { createClient } from "@supabase/supabase-js";
+// Imported for its side effect, and it has to stay above createClient:
+// detectSessionInUrl wipes the token out of the address on boot, and
+// authLinks reads what the email link was carrying before that happens.
+import "./authLinks.js";
 const runtimeConfig = (typeof window !== "undefined" && window.SMOQUIT_CONFIG) || {};
 export const SUPABASE_URL = runtimeConfig.SUPABASE_URL || undefined;
 export const SUPABASE_ANON_KEY = runtimeConfig.SUPABASE_ANON_KEY || undefined;

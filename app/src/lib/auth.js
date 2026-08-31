@@ -6,14 +6,17 @@
 //  button only when pressing it would work. Turning one on is done in the
 //  Supabase dashboard and needs no rebuild here — see UPLOAD-ME-README.txt.
 //
-//  signInWithProvider sends people back to window.location.origin, which
-//  Supabase will refuse unless that exact address is in the project's
-//  redirect list. That is the usual cause of a social login bouncing to an
-//  old address after a move.
+//  Everything that leaves and comes back — a social login, a confirmation
+//  email, a reset email — names this site's own origin as the way back, via
+//  authRedirectTo() in authLinks.js. Supabase refuses an address that is not
+//  in the project's redirect list, which is the usual cause of a login
+//  bouncing to an old address after a move, and of a mailed link opening
+//  localhost.
 // ─────────────────────────────────────────────────────────────────────────
 
 import React from "react";
 import { sqT } from "../i18n/index.js";
+import { authRedirectTo, setRecovering } from "./authLinks.js";
 import { clearCache } from "./cache.js";
 import { currentUserId } from "./storage.js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from "./supabase.js";
@@ -26,8 +29,10 @@ export function useAuth() {
         e(data.session);
         n(true);
       });
-      const { data } = supabase.auth.onAuthStateChange((i, o) => {
-        e(o);
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        // Arriving on a reset link: signed in, but the app must not open yet.
+        if (event === "PASSWORD_RECOVERY") setRecovering(true);
+        e(session);
       });
       return () => data.subscription.unsubscribe();
     }, []),
@@ -48,13 +53,26 @@ export async function signUpWithPassword(email, password) {
   return supabase.auth.signUp({
     email: email,
     password: password,
+    options: {
+      emailRedirectTo: authRedirectTo(),
+    },
+  });
+}
+export async function sendPasswordReset(email) {
+  return supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: authRedirectTo(),
+  });
+}
+export async function setNewPassword(password) {
+  return supabase.auth.updateUser({
+    password: password,
   });
 }
 export async function signInWithProvider(provider) {
   return supabase.auth.signInWithOAuth({
     provider: provider,
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: authRedirectTo(),
     },
   });
 }
@@ -95,6 +113,14 @@ export function friendlyAuthError(msg) {
   if (/provider is not enabled|Unsupported provider/i.test(text))
     return sqT(
       "That sign-in option isn't switched on for this app yet. Use your email and password below.",
+    );
+  if (/email not confirmed/i.test(text))
+    return sqT(
+      "This account hasn't been confirmed yet. Open the confirmation link in the email we sent you.",
+    );
+  if (/expired|invalid.*(token|link)|token.*(expired|invalid)/i.test(text))
+    return sqT(
+      "That link didn't work — it may have expired or already been used. Ask for a new one.",
     );
   return text || sqT("Something went wrong.");
 }

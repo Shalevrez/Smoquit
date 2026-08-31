@@ -5,6 +5,10 @@
 //  actually enabled on the Supabase project — showing a button that answers
 //  "provider is not enabled" is worse than showing no button.
 //
+//  A third mode, "forgot", asks Supabase to mail a reset link. Its reply is
+//  the same whether or not the address has an account — that is what stops
+//  the form being used to find out who has signed up.
+//
 //  The language switch at the bottom is remembered in this browser only:
 //  nobody is signed in yet, so there is no account to remember it in.
 // ─────────────────────────────────────────────────────────────────────────
@@ -14,10 +18,12 @@ import { SQ_LANG, SQ_LANG_OPTIONS, sqSetLang, sqT, useSqLang } from "../i18n/ind
 import {
   fetchEnabledProviders,
   friendlyAuthError,
+  sendPasswordReset,
   signInWithPassword,
   signInWithProvider,
   signUpWithPassword,
 } from "../lib/auth.js";
+import { bootLinkError } from "../lib/authLinks.js";
 import { colors } from "../theme/colors.js";
 import {
   authCardStyle,
@@ -38,19 +44,38 @@ export function AuthScreen() {
     [mode, setMode] = React.useState("signin"),
     [email, setEmail] = React.useState(""),
     [password, setPassword] = React.useState(""),
-    [notice, setNotice] = React.useState(null),
+    [notice, setNotice] = React.useState(() =>
+      bootLinkError ? { ok: false, text: friendlyAuthError(bootLinkError) } : null,
+    ),
     [busy, setBusy] = React.useState(false),
     submit = async () => {
       setNotice(null);
       setBusy(true);
       try {
-        if (mode === "signup") {
-          const { error } = await signUpWithPassword(email, password);
+        if (mode === "forgot") {
+          const { error } = await sendPasswordReset(email);
           if (error) throw error;
           setNotice({
             ok: true,
-            text: sqT("Check your email to confirm your account, then sign in."),
+            text: sqT(
+              "If that address has an account, a reset link is on its way. It works once, and expires in an hour.",
+            ),
           });
+        } else if (mode === "signup") {
+          const { data, error } = await signUpWithPassword(email, password);
+          if (error) throw error;
+          // With "Confirm email" switched off in Supabase, signing up hands
+          // back a session there and then — the app is about to open, so a
+          // "check your email" note would be a lie. Say it only when there
+          // is genuinely an email to wait for.
+          setNotice(
+            data?.session
+              ? null
+              : {
+                  ok: true,
+                  text: sqT("Check your email to confirm your account, then sign in."),
+                },
+          );
         } else {
           const { error } = await signInWithPassword(email, password);
           if (error) throw error;
@@ -58,7 +83,7 @@ export function AuthScreen() {
       } catch (err) {
         setNotice({
           ok: false,
-          text: err.message || sqT("Something went wrong."),
+          text: friendlyAuthError(err.message),
         });
       } finally {
         setBusy(false);
@@ -82,9 +107,22 @@ export function AuthScreen() {
       alive = false;
     };
   }, []);
-  const showGoogleBtn = !!(oauthProviders && oauthProviders.google),
-    showAppleBtn = !!(oauthProviders && oauthProviders.apple),
+  const forgotMode = mode === "forgot",
+    showGoogleBtn = !!(oauthProviders && oauthProviders.google) && !forgotMode,
+    showAppleBtn = !!(oauthProviders && oauthProviders.apple) && !forgotMode,
     showOauthRow = showGoogleBtn || showAppleBtn;
+  // One sqT() per literal: check-i18n reads a single ternary, but a nested
+  // one hides its strings, and an unseen string is an untranslated one.
+  const submitLabel = forgotMode
+      ? sqT("Send reset link")
+      : mode === "signup"
+        ? sqT("Create account")
+        : sqT("Sign in"),
+    toggleLabel = forgotMode
+      ? sqT("Back to sign in")
+      : mode === "signup"
+        ? sqT("Already have an account? Sign in")
+        : sqT("New here? Create an account");
   return (
     <div style={authPageStyle}>
       <div style={authCardStyle}>
@@ -109,7 +147,11 @@ export function AuthScreen() {
           </span>
         </div>
         <p style={authTaglineStyle}>
-          {sqT("Track what you smoke. Notice the pattern. Loosen its grip.")}
+          {sqT(
+            forgotMode
+              ? "Enter your email and we'll send you a link to set a new password."
+              : "Track what you smoke. Notice the pattern. Loosen its grip.",
+          )}
         </p>
         {showOauthRow ? (
           <div
@@ -153,16 +195,22 @@ export function AuthScreen() {
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="email"
         />
-        <input
-          style={authInputStyle}
-          type="password"
-          placeholder={sqT("Password")}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-        />
-        <button style={authSubmitStyle} onClick={submit} disabled={busy || !email || !password}>
-          {busy ? "…" : sqT(mode === "signup" ? "Create account" : "Sign in")}
+        {forgotMode ? null : (
+          <input
+            style={authInputStyle}
+            type="password"
+            placeholder={sqT("Password")}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          />
+        )}
+        <button
+          style={authSubmitStyle}
+          onClick={submit}
+          disabled={busy || !email || (!forgotMode && !password)}
+        >
+          {busy ? "…" : submitLabel}
         </button>
         {notice && (
           <div
@@ -176,16 +224,25 @@ export function AuthScreen() {
             {notice.text}
           </div>
         )}
+        {mode === "signin" ? (
+          <button
+            style={{ ...authToggleStyle, marginTop: 10 }}
+            onClick={() => {
+              setMode("forgot");
+              setNotice(null);
+            }}
+          >
+            {sqT("Forgot your password?")}
+          </button>
+        ) : null}
         <button
           style={authToggleStyle}
           onClick={() => {
-            setMode(mode === "signup" ? "signin" : "signup");
+            setMode(mode === "signin" ? "signup" : "signin");
             setNotice(null);
           }}
         >
-          {sqT(
-            mode === "signup" ? "Already have an account? Sign in" : "New here? Create an account",
-          )}
+          {toggleLabel}
         </button>
         <p style={authPrivacyStyle}>
           {sqT(

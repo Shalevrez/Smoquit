@@ -47,7 +47,85 @@ AFTER IT'S LIVE — AND AFTER ANY MOVE TO A NEW ADDRESS:
      window.location.origin after a social login, and Supabase refuses any
      origin that is not on that list — so "Continue with Google" will bounce
      you to the OLD address, or fail outright, until you update it.
-   - Email/password sign-in works with no extra setup.
+   - The same list decides where Supabase's EMAILS land. See the next section
+     — a Site URL left at its factory default is why a confirmation mail
+     opens http://localhost:3000 and dead-ends there.
+
+
+THE CONFIRMATION EMAIL THAT OPENS LOCALHOST
+-------------------------------------------
+Symptom: you create an account, an email arrives, you click the link, and the
+browser lands on http://localhost:3000/?... — a page that does not exist.
+The account is now half-made: it exists, it is unconfirmed, and signing in
+says the email is not confirmed.
+
+Nothing is broken in the app. Supabase decides where its own emails point,
+and a brand-new project ships with Site URL set to http://localhost:3000
+because that is where its authors assume you are developing. Until you change
+it, every confirmation and reset link is addressed to a server on YOUR laptop.
+
+You have two ways forward. Pick ONE.
+
+  OPTION A — NO EMAIL AT ALL (simplest; what to do if you just want people
+  signing up and using the app today)
+
+    Supabase → Authentication → Sign In / Providers → Email
+      → turn "Confirm email" OFF → Save.
+
+    Creating an account now signs you straight in, with no email sent and
+    nothing to click. The app already handles this: when Supabase hands back
+    a session on sign-up, it opens the app instead of showing "check your
+    email".
+
+    The trade-off is that nobody proves they own the address they typed. For
+    an app whose data is per-account and private, and which never emails
+    anyone, that costs you very little — but a typo'd address becomes an
+    account nobody can ever recover, because a reset link has nowhere to go.
+
+    Note this does NOT switch off password reset. Reset emails are sent on
+    demand and are unaffected by the "Confirm email" toggle — so do Option B
+    as well if you want the "Forgot your password?" link to work.
+
+  OPTION B — KEEP THE EMAIL, POINT IT AT THE LIVE SITE
+
+    Supabase → Authentication → URL Configuration
+      → Site URL:      https://<your-live-address>
+      → Redirect URLs: the same https://<your-live-address>
+      → Save.
+
+    Use the exact address people actually visit — same scheme, same host, no
+    trailing slash, and your own domain rather than the .pages.dev one if you
+    have attached a domain. Supabase compares these literally.
+
+    The app asks for that address by name on every sign-up and every reset,
+    so once it is on the Redirect URLs list the links come back to the live
+    site and sign the person in. An address that is NOT on the list is not an
+    error — Supabase silently falls back to Site URL, which is exactly how
+    you end up back at localhost. If a link still opens localhost after this,
+    that list is what to re-read.
+
+    Existing accounts stuck unconfirmed from before the fix: Supabase →
+    Authentication → Users → the user → confirm them by hand, or delete the
+    row and sign up again.
+
+
+FORGOT YOUR PASSWORD
+--------------------
+The sign-in screen has a "Forgot your password?" link under the Sign in
+button. It asks for an address, Supabase mails a one-time link, and following
+the link opens a "Choose a new password" screen instead of the app — the
+password is changed there, and then the app opens.
+
+This one genuinely needs email; there is no way to reset a password without
+it. So it needs the Site URL / Redirect URLs of Option B above even if you
+chose Option A for sign-up. Without it the reset link points at localhost
+and the password can never be changed.
+
+The reply is deliberately the same whether or not the address has an account
+("if that address has an account, a reset link is on its way") — that is
+what stops the form being used to find out who has signed up. Supabase links
+expire in an hour and work once; a stale one now says so on screen rather
+than showing a blank sign-in form.
 
 
 ENABLING "CONTINUE WITH GOOGLE"
@@ -171,7 +249,9 @@ TESTS
 no test account, no network, and no chance of writing to anybody's real
 history. It covers logging a cigarette, tagging it, correcting its time,
 undo, the goal and settings forms, switching to Hebrew, and every tab
-loading without throwing.
+loading without throwing. It also walks the email-link paths that are
+otherwise only reachable through an inbox: asking for a reset link, arriving
+on one, and arriving on one that has expired.
 
 tests/unit/ runs the date and migration logic directly, under several
 timezones — that code was wrong in a way that was invisible in UTC and wrong

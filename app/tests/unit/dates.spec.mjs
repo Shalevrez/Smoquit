@@ -42,13 +42,7 @@ test(`[${TZ}] a range walks calendar days, so a clock change still counts once`,
   // Spans the European clock change on 25 October 2026, when one local day
   // is 23 or 25 hours long. Adding 86400000ms would skip or repeat a day.
   const keys = dayKeysBetween("2026-10-23", "2026-10-27");
-  expect(keys).toEqual([
-    "2026-10-23",
-    "2026-10-24",
-    "2026-10-25",
-    "2026-10-26",
-    "2026-10-27",
-  ]);
+  expect(keys).toEqual(["2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27"]);
   expect(new Set(keys).size).toBe(keys.length);
 });
 
