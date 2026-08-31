@@ -9,10 +9,6 @@
 #  their own — only the production branch does.
 # ─────────────────────────────────────────────────────────────────────────
 
-[build]
-  # Static site: nothing to compile, the repo root is what gets served.
-  publish = "."
-
 # Pull requests: no preview deploy, no deploy-preview-N--smoquit URL.
 [context.deploy-preview]
   ignore = "exit 0"
