@@ -25,6 +25,8 @@ export function TodayTab({
   settings,
   onAsk,
   onRemove,
+  onRideItOut,
+  heldToday,
   onNoneToday,
   markedNoneToday,
 }) {
@@ -100,6 +102,31 @@ export function TodayTab({
         <button className="sq-btn" style={primaryButtonStyle} onClick={onAsk}>
           {sqT("+ I just smoked one")}
         </button>
+        {/*
+          The other half of the story, and the only button here that is
+          pressed BEFORE a decision rather than after one. Deliberately
+          quieter than the primary action — moss rather than ember — because
+          this is not an alarm, and because the app should not look like it
+          is nagging somebody who came here for help.
+        */}
+        <button
+          className="sq-btn"
+          onClick={onRideItOut}
+          style={{
+            marginTop: 8,
+            width: "100%",
+            padding: "13px",
+            borderRadius: 10,
+            border: `1px solid ${colors.moss}`,
+            background: colors.mossSoft,
+            color: colors.moss,
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {sqT("I want one right now")}
+        </button>
         <div
           style={{
             fontSize: 12,
@@ -109,6 +136,20 @@ export function TodayTab({
         >
           {sqT("Logging honestly is how the insights get useful.")}
         </div>
+        {heldToday > 0 && (
+          <div
+            style={{
+              fontSize: 13,
+              color: colors.moss,
+              marginTop: 8,
+              fontWeight: 600,
+            }}
+          >
+            {heldToday === 1
+              ? sqT("1 craving ridden out today")
+              : sqT("{n} cravings ridden out today", { n: heldToday })}
+          </div>
+        )}
         {/*
           Without this, a clean day is indistinguishable from a day nobody
           opened the app — so a day of not smoking could never be counted,

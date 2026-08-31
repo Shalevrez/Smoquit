@@ -57,6 +57,22 @@ export const SQ_HE = {
   "Counted as a smoke-free day ✓": "\u200fנספר כיום נקי ✓",
   "Smoke-free days": "ימים נקיים",
   "Logging honestly is how the insights get useful.": "תיעוד כן הוא מה שהופך את התובנות למועילות.",
+
+  // Riding out a craving.
+  "I want one right now": "בא לי עכשיו",
+  "1 craving ridden out today": "דחף אחד שעבר היום",
+  "{n} cravings ridden out today": "‏{n} דחפים שעברו היום",
+  "Ride it out": "רכבו על הגל",
+  "The wave has passed": "הגל עבר",
+  "A craving peaks and fades in a few minutes, smoked or not.":
+    "דחף מגיע לשיא ודועך תוך כמה דקות, בין אם עישנתם ובין אם לא.",
+  "You didn't smoke for five minutes. That is the whole trick.": "חמש דקות בלי לעשן. זה כל הסוד.",
+  "Breathe in": "שאיפה",
+  Hold: "החזקה",
+  "Breathe out": "נשיפה",
+  "What's driving it?": "מה מניע את זה?",
+  "It passed": "עבר לי",
+  "I smoked one anyway": "עישנתי בכל זאת",
   "Today's timeline": "ציר הזמן של היום",
   "Nothing logged yet today. If a craving comes, try waiting it out — most pass in 3–5 minutes. If you do smoke, tap the button above so you can see your own pattern later.":
     "עדיין לא תועד כלום היום. אם עולה דחף, נסו לחכות שיחלוף — רובם עוברים תוך 3–5 דקות. אם בכל זאת עישנתם, לחצו על הכפתור למעלה כדי שתוכלו לראות בהמשך את הדפוס שלכם.",

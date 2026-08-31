@@ -37,6 +37,19 @@ export const LOGS = Object.fromEntries([
   day("2026-08-31", [8, 20, "Coffee"], [11, 30, "Unlogged"]),
 ]);
 
+// Urges faced, both the ones that passed and the ones that did not. Today
+// deliberately has none, so a test can watch the first one appear.
+const craving = (date, hour, outcome) => ({
+  ts: new Date(`${date}T${String(hour).padStart(2, "0")}:00:00+03:00`).getTime(),
+  trigger: "Stress",
+  outcome,
+  heldMs: 5 * 60 * 1000,
+});
+
+export const CRAVINGS = {
+  "2026-08-30": [craving("2026-08-30", 11, "held"), craving("2026-08-30", 16, "smoked")],
+};
+
 export const GOAL = {
   baseline: 15,
   target: 8,
@@ -89,6 +102,7 @@ export async function routeSupabase(page, opts = {}) {
     // Already migrated by default, so a test only exercises the migration
     // when it deliberately clears this.
     meta: { schemaVersion: 2, trackingStartedAt: "2026-08-25" },
+    cravings: CRAVINGS,
     ...(opts.data ?? {}),
   };
 

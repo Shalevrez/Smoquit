@@ -183,6 +183,27 @@ ships:
     done
 
 
+RIDING OUT A CRAVING
+--------------------
+"I want one right now" on the Today tab opens a five-minute timer, a
+breathing pattern, the reason you wrote for yourself on the Goal tab, and —
+once you say what set it off — something to do instead. Both ways out are
+always there, and giving in is not a dead end: "I smoked one anyway" records
+the craving and then hands over to the normal logging flow with the trigger
+already chosen, so you are never asked the same question twice.
+
+Both outcomes are stored, not just the wins. A count of wins alone would be
+flattering and useless; what makes a number worth reading is that the total
+it came out of is real.
+
+This lives in a fourth row in the database, under the key `cravings`. No
+schema change was needed — user_data is a key/value table, so a new key is
+just a new row, and supabase-schema.sql is unchanged.
+
+If nothing is chosen and the sheet is simply closed, nothing is recorded.
+We do not know what happened, and guessing would put invented wins into a
+number whose whole value is that it is true.
+
 WORKING WITHOUT A SIGNAL
 ------------------------
 The app keeps a copy of your data in the browser, so it opens instantly and

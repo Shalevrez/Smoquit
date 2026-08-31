@@ -76,8 +76,15 @@ export function GoalTab({ goal, setGoal, logs, settings }) {
               lineHeight: 1.4,
             }}
           >
+            {/*
+              <bdi>, because this is the one string on screen the app did
+              not write. Somebody reading in Hebrew may well have typed
+              their reason in English, and unquarantined it the bidi
+              algorithm drags the quote marks to the wrong ends and splits
+              the sentence. bdi isolates it and lets it run its own way.
+            */}
             {'"'}
-            {goal.reason}
+            <bdi>{goal.reason}</bdi>
             {'"'}
           </div>
         </div>

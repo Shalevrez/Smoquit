@@ -31,6 +31,7 @@ const DYNAMIC = [
   ["data/tabs.js", "TABS", ["label"]],
   ["data/tips.js", "TIPS", ["t", "d"]],
   ["data/habits.js", "HABITS", ["cue", "swap"]],
+  ["data/breathing.js", "BREATH_PHASES", ["label"]],
   ["data/countries.js", "COUNTRIES", ["name"]],
   ["data/countries.js", "FALLBACK_COUNTRY", ["name"]],
   ["data/products.js", "PRODUCT_TYPE_LABELS", "values"],

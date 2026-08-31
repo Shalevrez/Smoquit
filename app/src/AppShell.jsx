@@ -22,7 +22,9 @@ import { countOn, entriesOn, markDeleted } from "./domain/entries.js";
 import { todayKey } from "./lib/dates.js";
 import { migrate } from "./lib/migrate.js";
 import * as store from "./lib/store.js";
+import { addCraving, heldOn } from "./domain/cravings.js";
 import { BackdateSheet } from "./sheets/BackdateSheet.jsx";
+import { CravingSheet } from "./sheets/CravingSheet.jsx";
 import { TriggerSheet } from "./sheets/TriggerSheet.jsx";
 import { GoalTab } from "./tabs/GoalTab.jsx";
 import { HabitsTab } from "./tabs/HabitsTab.jsx";
@@ -64,6 +66,8 @@ export function AppShell({ user }) {
   const [goal, setGoal] = React.useState(null);
   const [settings, setSettings] = React.useState(null);
   const [meta, setMeta] = React.useState(null);
+  const [cravings, setCravings] = React.useState({});
+  const [ridingOut, setRidingOut] = React.useState(false);
   // Which sheet is up, if any: the trigger picker, then the time picker.
   const [askingTrigger, setAskingTrigger] = React.useState(null);
   const [backdating, setBackdating] = React.useState(null);
@@ -78,21 +82,24 @@ export function AppShell({ user }) {
       // a cache this is instant and works with no signal; without one it is
       // the same loading screen as before.
       const cachedLogs = store.cached("logs", {});
+      const cachedCravings = store.cached("cravings", {});
       const cachedSettings = store.cached("settings", null);
       if (cachedSettings) {
         sqSetLang(cachedSettings.lang);
         setSettings(cachedSettings);
         setLogs(cachedLogs);
+        setCravings(cachedCravings);
         setGoal(store.cached("goal", null));
         setMeta(store.cached("meta", null));
         setReady(true);
       }
 
-      const [freshLogs, freshGoal, freshMeta, freshSettings] = await Promise.all([
+      const [freshLogs, freshGoal, freshMeta, freshSettings, freshCravings] = await Promise.all([
         store.refresh("logs", {}),
         store.refresh("goal", null),
         store.refresh("meta", null),
         store.refresh("settings", null),
+        store.refresh("cravings", {}),
       ]);
 
       // Entries used to be filed by UTC date; put them under the local day
@@ -101,6 +108,7 @@ export function AppShell({ user }) {
       setLogs(migrated.logs);
       setMeta(migrated.meta);
       setGoal(freshGoal.value);
+      setCravings(freshCravings.value ?? {});
 
       let saved = freshSettings.value;
       if (!saved) {
@@ -189,6 +197,17 @@ export function AppShell({ user }) {
     });
   }, [dayKey]);
 
+  // Both outcomes are recorded. Counting only the wins would make the
+  // number flattering and useless — "seven of eleven this week" is the fact
+  // worth having.
+  const recordCraving = React.useCallback((outcome, { trigger, heldMs }) => {
+    setCravings((prev) => {
+      const next = addCraving(prev, { ts: Date.now(), trigger: trigger ?? null, outcome, heldMs });
+      store.write("cravings", next);
+      return next;
+    });
+  }, []);
+
   const removeLog = React.useCallback(
     (index) => {
       setLogs((prev) => {
@@ -229,7 +248,13 @@ export function AppShell({ user }) {
         @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes smoke { 0% { opacity:.5; transform: translateY(0) scaleX(1); } 100% { opacity:0; transform: translateY(-22px) scaleX(1.6); } }
         .sq-tab:focus-visible, .sq-btn:focus-visible { outline: 2px solid ${colors.ember}; outline-offset: 2px; }
-        @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; }
+          /* The breathing circle grows and shrinks with a transition, which
+             an animation rule does not touch. It still changes size, so the
+             pattern is followable; it just stops sliding. */
+          .sq-breath { transition: none !important; }
+        }
       `}</style>
 
       <div style={shellStyle}>
@@ -261,6 +286,8 @@ export function AppShell({ user }) {
               settings={settings}
               onAsk={() => setAskingTrigger(true)}
               onRemove={removeLog}
+              onRideItOut={() => setRidingOut(true)}
+              heldToday={heldOn(cravings, dayKey)}
               onNoneToday={markNoneToday}
               markedNoneToday={Array.isArray(logs[dayKey]) && todayLogs.length === 0}
             />
@@ -274,6 +301,33 @@ export function AppShell({ user }) {
           {tab === "settings" && <SettingsTab settings={settings} onChange={updateSettings} />}
         </main>
       </div>
+
+      {/*
+        Giving in is not a dead end: "I smoked one anyway" records the
+        craving and hands straight over to the normal logging flow with the
+        trigger already chosen, so nobody is asked the same question twice
+        or loses the entry for having lost the argument.
+      */}
+      {ridingOut && (
+        <CravingSheet
+          goal={goal}
+          onClose={() => setRidingOut(false)}
+          onHeld={(session) => {
+            recordCraving("held", session);
+            setRidingOut(false);
+          }}
+          onSmoked={(session) => {
+            recordCraving("smoked", session);
+            setRidingOut(false);
+            if (session.trigger) {
+              const ts = addLog(session.trigger);
+              setBackdating({ ts, trigger: session.trigger });
+            } else {
+              setAskingTrigger(true);
+            }
+          }}
+        />
+      )}
 
       {/*
         Logging is two sheets in a row: what set it off, then when it really

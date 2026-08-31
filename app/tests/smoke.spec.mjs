@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "./serve.mjs";
-import { routeSupabase, NOW, LOGS, GOAL, SUPABASE_HOST } from "./fixtures.mjs";
+import { routeSupabase, NOW, LOGS, GOAL, SETTINGS, SUPABASE_HOST } from "./fixtures.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PORT = 5010;
@@ -24,8 +24,19 @@ test.afterAll(async () => {
   await new Promise((r) => server.close(r));
 });
 
+/**
+ * Loads the app against the stand-in Supabase, at a fixed moment.
+ *
+ * `controlClock` swaps the frozen clock for a fake one that only moves when
+ * a test says so, which is how anything with a five-minute timer gets
+ * tested in a second. It has to be pumped once after navigation: with the
+ * clock installed nothing on a timer runs at all, and the app's own boot
+ * needs a tick to finish.
+ */
 async function open(page, opts = {}) {
-  await page.clock.setFixedTime(NOW);
+  if (opts.controlClock) await page.clock.install({ time: NOW });
+  else await page.clock.setFixedTime(NOW);
+
   const { writes } = await routeSupabase(page, opts);
   await page.addInitScript(
     (l) => window.localStorage.setItem("smoquit.lang", l),
@@ -34,6 +45,7 @@ async function open(page, opts = {}) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(`http://localhost:${PORT}/`);
+  if (opts.controlClock) await page.clock.runFor(2000);
   if (opts.signedIn !== false) await expect(page.locator("nav")).toBeVisible();
   return {
     errors,
@@ -353,4 +365,117 @@ test("signing out does not leave the account cached on the device", async ({ pag
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect.poll(cachedKeys).toHaveLength(0);
+});
+
+// ── The craving moment ──────────────────────────────────────────────────
+
+test("riding out a craving is recorded as a win, and costs no cigarette", async ({ page }) => {
+  const { written, writes } = await open(page);
+
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await expect(page.getByText("Ride it out")).toBeVisible();
+  // The clock starts on its own — no question is asked first.
+  await expect(page.getByText("5:00")).toBeVisible();
+
+  await page.getByRole("button", { name: "Stress", exact: true }).click();
+  await page.getByRole("button", { name: "It passed" }).click();
+
+  await written("cravings").toMatchObject({
+    "2026-08-31": { length: 1, 0: { outcome: "held", trigger: "Stress" } },
+  });
+  // Nothing was smoked, so nothing was logged.
+  expect(writes.map((w) => w.key)).not.toContain("logs");
+  await expect(page.getByText("1 craving ridden out today")).toBeVisible();
+});
+
+test("a craving can be ridden out without naming what caused it", async ({ page }) => {
+  const { written } = await open(page);
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await page.getByRole("button", { name: "It passed" }).click();
+  await written("cravings").toMatchObject({ "2026-08-31": { 0: { trigger: null } } });
+});
+
+test("giving in records the craving and hands over to logging", async ({ page }) => {
+  const { written } = await open(page);
+
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await page.getByRole("button", { name: "Coffee", exact: true }).click();
+  await page.getByRole("button", { name: "I smoked one anyway" }).click();
+
+  // The urge is recorded honestly, not quietly dropped for being a loss.
+  await written("cravings").toMatchObject({
+    "2026-08-31": { 0: { outcome: "smoked", trigger: "Coffee" } },
+  });
+
+  // And it goes straight to the time sheet — the trigger was already given,
+  // so nobody is asked the same question twice.
+  await expect(page.getByText("When did you actually smoke it?")).toBeVisible();
+  await page.getByRole("button", { name: "Keep current time" }).click();
+  await written("logs").toMatchObject({
+    "2026-08-31": { length: 3, 2: { trigger: "Coffee" } },
+  });
+});
+
+test("giving in without naming a trigger still asks what set it off", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await page.getByRole("button", { name: "I smoked one anyway" }).click();
+  await expect(page.getByText("What set this one off?")).toBeVisible();
+});
+
+test("choosing a trigger offers something to do instead", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await expect(page.getByText("Swap", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Coffee", exact: true }).click();
+  await expect(page.getByText("Swap", { exact: true })).toBeVisible();
+  await expect(page.getByText(/switch to tea for a week/)).toBeVisible();
+
+  // "Craving" describes the urge itself, so there is no routine to swap.
+  await page.getByRole("button", { name: "Craving", exact: true }).click();
+  await expect(page.getByText("Swap", { exact: true })).toHaveCount(0);
+});
+
+test("the sheet shows you your own reason", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await expect(page.getByText(`"${GOAL.reason}"`)).toBeVisible();
+});
+
+test("the timer runs down and says so when the wave has passed", async ({ page }) => {
+  await open(page, { controlClock: true });
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await expect(page.getByText("5:00")).toBeVisible();
+
+  await page.clock.runFor("04:00");
+  await expect(page.getByText("1:00")).toBeVisible();
+  await expect(page.getByText("The wave has passed")).toHaveCount(0);
+
+  await page.clock.runFor("01:05");
+  await expect(page.getByText("The wave has passed")).toBeVisible();
+  await expect(page.getByText("0:00")).toBeVisible();
+});
+
+test("closing the sheet records nothing, because nothing is known", async ({ page }) => {
+  const { writes } = await open(page);
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+
+  await expect(page.getByText("Ride it out")).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(writes.map((w) => w.key)).not.toContain("cravings");
+});
+
+test("the craving sheet reads right-to-left in Hebrew", async ({ page }) => {
+  // Language lives in the account, and the account wins over the browser —
+  // that is the whole point of storing it there, so setting localStorage
+  // alone would be overwritten on boot.
+  await open(page, { lang: "he", data: { settings: { ...SETTINGS, lang: "he" } } });
+  await page.getByRole("button", { name: "בא לי עכשיו" }).click();
+  await expect(page.getByText("רכבו על הגל")).toBeVisible();
+  await expect(page.getByText("שאיפה")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await page.getByRole("button", { name: "עבר לי" }).click();
+  await expect(page.getByText("דחף אחד שעבר היום")).toBeVisible();
 });
