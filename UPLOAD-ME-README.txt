@@ -1,4 +1,4 @@
-Smoquit — READY TO UPLOAD
+Smoquit — READY TO DEPLOY
 =========================
 
 Keys are already filled in (config.js has your Project URL and anon key).
@@ -10,13 +10,18 @@ Two things still need doing:
    - This creates the per-user table + security rules.
    - It is safe to run twice; if you already did this, skip it.
 
-2. UPLOAD
-   - Upload the CONTENTS of this folder to Cloudflare Pages
-     (index.html, assets/, config.js, _redirects — all of it).
+2. DEPLOY
+   - This repo is connected to Netlify (project "smoquit"), so pushing to a
+     branch deploys it — no manual upload needed. Pull requests get their own
+     preview at https://deploy-preview-<PR-number>--smoquit.netlify.app
+   - Deploying by hand instead? Upload the CONTENTS of this folder
+     (index.html, assets/, config.js, _redirects — all of it), not the folder.
+   - _redirects is what keeps deep links working on a single-page app.
+     Netlify reads it natively; so does Cloudflare Pages if you ever move.
 
 AFTER IT'S LIVE:
    - In Supabase → Authentication → URL Configuration, set the Site URL
-     to your Cloudflare URL, so Google/Apple login redirects work.
+     to your live Netlify URL, so Google/Apple login redirects work.
    - Email/password sign-in works with no extra setup.
 
 
@@ -45,8 +50,12 @@ Turning it on is done in the dashboards, not in this code:
       → paste the Client ID and Client Secret → Save.
 
  c) Supabase → Authentication → URL Configuration
-      → Site URL:      your live Cloudflare URL (e.g. https://smoquit.pages.dev)
-      → Redirect URLs: add that same URL.
+      → Site URL:      your live Netlify URL
+                       (default: https://smoquit.netlify.app — use your own
+                        domain instead if you've attached one)
+      → Redirect URLs: add that same URL. To let sign-in work on pull-request
+                       previews too, also add the wildcard
+                       https://*--smoquit.netlify.app
     Without this, Google sends people back to the wrong address after login.
 
 Reload the app — "Continue with Google" appears on its own, no rebuild needed.
