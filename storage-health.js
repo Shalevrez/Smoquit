@@ -33,16 +33,46 @@
     );
   }
 
-  // RLS is on but the policies are missing, so the database refuses the row.
+  // The table is there, but this account is not allowed to touch it —
+  // a missing GRANT, or an insert blocked by row-level security.
   function isPermissionDenied(err) {
     if (!err) return false;
     var code = String(err.code || "");
     var text = String(err.message || "");
     return (
       code === "42501" ||             // Postgres: insufficient_privilege
-      code === "PGRST301" ||          // PostgREST: JWT / row-security failure
       /row-level security|permission denied/i.test(text)
     );
+  }
+
+  // The request never got as far as the table: the login token is missing,
+  // expired or rejected. Re-running SQL would not help here — signing in
+  // again would, so this must not be lumped in with the case above.
+  function isAuthProblem(err) {
+    if (!err) return false;
+    var code = String(err.code || "");
+    var text = String(err.message || "");
+    return (
+      code === "PGRST301" ||          // PostgREST: JWT rejected
+      code === "401" || err.status === 401 ||
+      /jwt|token|not authenticated|invalid claim/i.test(text)
+    );
+  }
+
+  // The exact words the database used. The friendly sentence above is a
+  // guess at the cause; THIS is the evidence, and without it a wrong guess
+  // sends you fixing the wrong thing.
+  function rawDetail(err) {
+    if (!err) return "";
+    var bits = [];
+    if (err.code) bits.push(String(err.code));
+    if (err.message) bits.push(String(err.message));
+    if (err.details) bits.push(String(err.details));
+    if (err.hint) bits.push("hint: " + String(err.hint));
+    if (!bits.length) {
+      try { bits.push(JSON.stringify(err)); } catch (e) { bits.push(String(err)); }
+    }
+    return bits.join(" · ");
   }
 
   function messageFor(kind, err) {
@@ -54,10 +84,16 @@
         "Open your Supabase project → SQL Editor, paste supabase-schema.sql and run it, then reload this page."
       );
     }
+    if (isAuthProblem(err)) {
+      return (
+        "Smoquit could not " + verb + ": your sign-in was not accepted. " +
+        "Sign out and sign back in. If that does not help, check that Supabase's Site URL matches the address you are on."
+      );
+    }
     if (isPermissionDenied(err)) {
       return (
         "Smoquit could not " + verb + ": the database refused the request. " +
-        "Re-run supabase-schema.sql in your Supabase project — it sets the per-user security rules — then reload this page."
+        "Re-run the CURRENT supabase-schema.sql from the repo — it grants this app access to the table — then reload this page."
       );
     }
     return (
@@ -66,7 +102,7 @@
     );
   }
 
-  function render(text) {
+  function render(text, detail) {
     if (dismissed || typeof document === "undefined" || !document.body) return;
 
     var existing = document.getElementById(BANNER_ID);
@@ -85,7 +121,25 @@
       "font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
       "padding:12px 44px 12px 16px", "box-shadow:0 1px 6px rgba(0,0,0,.2)"
     ].join(";");
-    bar.textContent = text;
+    var line = document.createElement("div");
+    line.textContent = text;
+    bar.appendChild(line);
+
+    // The database's own words, verbatim and selectable, so the exact code
+    // can be copied into a bug report instead of described from memory.
+    if (detail) {
+      var raw = document.createElement("div");
+      raw.textContent = detail;
+      raw.style.cssText = [
+        "margin-top:5px",
+        "font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace",
+        "opacity:.85",
+        "word-break:break-word",
+        "user-select:text",
+        "-webkit-user-select:text"
+      ].join(";");
+      bar.appendChild(raw);
+    }
 
     var close = document.createElement("button");
     close.type = "button";
@@ -108,11 +162,12 @@
   window.SMOQUIT_STORAGE_ERROR = function (kind, key, err) {
     try {
       var text = messageFor(kind, err);
+      var detail = rawDetail(err);
       if (document.body) {
-        render(text);
+        render(text, detail);
       } else {
         document.addEventListener("DOMContentLoaded", function () {
-          render(text);
+          render(text, detail);
         });
       }
     } catch (e) {
