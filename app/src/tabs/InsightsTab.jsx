@@ -15,9 +15,9 @@ import {
   sectionHeadingStyle,
   statGridStyle,
 } from "../theme/styles.js";
-export function InsightsTab({ logs }) {
+export function InsightsTab({ logs, meta }) {
   const lang = useSqLang(),
-    insights = React.useMemo(() => computeInsights(logs), [logs, lang]);
+    insights = React.useMemo(() => computeInsights(logs, meta), [logs, meta, lang]);
   if (insights.total === 0)
     return (
       <div style={emptyBoxStyle}>
@@ -35,6 +35,11 @@ export function InsightsTab({ logs }) {
         <Stat label={sqT("Logged total")} value={insights.total} />
         <Stat label={sqT("Daily average")} value={insights.avgPerDay.toFixed(1)} />
         <Stat label={sqT("Days tracked")} value={insights.days} />
+        <Stat
+          label={sqT("Smoke-free days")}
+          value={insights.smokeFreeDays}
+          accent={colors.moss}
+        />
         <Stat label={sqT("Best (lowest) day")} value={insights.bestDay} accent={colors.moss} />
       </div>
       <h3 style={sectionHeadingStyle}>{sqT("When you smoke")}</h3>

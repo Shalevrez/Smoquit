@@ -86,6 +86,9 @@ export async function routeSupabase(page, opts = {}) {
     logs: LOGS,
     goal: GOAL,
     settings: SETTINGS,
+    // Already migrated by default, so a test only exercises the migration
+    // when it deliberately clears this.
+    meta: { schemaVersion: 2, trackingStartedAt: "2026-08-25" },
     ...(opts.data ?? {}),
   };
 

@@ -19,7 +19,15 @@ import {
   triggerChipStyle,
   undoButtonStyle,
 } from "../theme/styles.js";
-export function TodayTab({ todayLogs, goal, settings, onAsk, onRemove }) {
+export function TodayTab({
+  todayLogs,
+  goal,
+  settings,
+  onAsk,
+  onRemove,
+  onNoneToday,
+  markedNoneToday,
+}) {
   const count = todayLogs.length,
     target = goal?.target ?? null,
     percentOfTarget = target ? Math.min(100, (count / Math.max(1, target)) * 100) : 0,
@@ -101,6 +109,33 @@ export function TodayTab({ todayLogs, goal, settings, onAsk, onRemove }) {
         >
           {sqT("Logging honestly is how the insights get useful.")}
         </div>
+        {/*
+          Without this, a clean day is indistinguishable from a day nobody
+          opened the app — so a day of not smoking could never be counted,
+          and never be the best day. Only offered while the day is still
+          empty; the moment anything is logged the question is answered.
+        */}
+        {count === 0 && (
+          <button
+            className="sq-btn"
+            onClick={onNoneToday}
+            disabled={markedNoneToday}
+            style={{
+              marginTop: 10,
+              width: "100%",
+              padding: "11px",
+              borderRadius: 10,
+              border: `1px solid ${markedNoneToday ? colors.moss : colors.line}`,
+              background: markedNoneToday ? colors.mossSoft : "none",
+              color: markedNoneToday ? colors.moss : colors.smoke,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: markedNoneToday ? "default" : "pointer",
+            }}
+          >
+            {markedNoneToday ? sqT("Counted as a smoke-free day ✓") : sqT("I haven't smoked today")}
+          </button>
+        )}
       </div>
       <h3 style={sectionHeadingStyle}>{sqT("Today's timeline")}</h3>
       {count === 0 ? (

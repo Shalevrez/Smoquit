@@ -1,11 +1,25 @@
 // ─────────────────────────────────────────────────────────────────────────
 //  Turning the log into the numbers the Insights tab shows.
+//
+//  One thing here is easy to get subtly wrong, and used to be: a day with
+//  no cigarettes has no entries, so it has no key, so it is invisible. The
+//  old code counted "days tracked" as the number of days that had at least
+//  one entry — which meant a perfect day did not count, the daily average
+//  was divided by too small a number, and "best (lowest) day" could never
+//  be zero however well you did.
+//
+//  So the day range comes from when tracking started, not from the keys
+//  present, and every day in between with nothing in it counts as a real
+//  zero. That makes the average slightly less flattering and the best day
+//  frequently zero — both of which are true — and it makes smoke-free days
+//  countable at all, which is the number people actually want.
 // ─────────────────────────────────────────────────────────────────────────
 
 import { SQ_LANG, sqLocale } from "../i18n/index.js";
-export function computeInsights(logs) {
+import { dayKey, dayKeysBetween, todayKey } from "../lib/dates.js";
+export function computeInsights(logs, meta) {
   const entries = [];
-  Object.values(logs).forEach((day) => day.forEach((entry) => entries.push(entry)));
+  Object.values(logs ?? {}).forEach((day) => day.forEach((entry) => entries.push(entry)));
 
   const total = entries.length;
   const byHour = new Array(24).fill(0);
@@ -20,11 +34,15 @@ export function computeInsights(logs) {
     }
   });
 
-  const daysWithEntries = Object.keys(logs).filter((key) => logs[key].length > 0);
-  const days = Math.max(daysWithEntries.length, 1);
+  // Every calendar day since tracking began, including the ones with
+  // nothing logged — those are the good days.
+  const startedAt = trackingStartedAt(logs, meta);
+  const trackedKeys = dayKeysBetween(startedAt, todayKey());
+  const countsPerDay = trackedKeys.map((key) => (logs?.[key] ?? []).length);
+  const days = Math.max(trackedKeys.length, 1);
   const avgPerDay = total / days;
-  const countsPerDay = daysWithEntries.map((key) => logs[key].length);
   const bestDay = countsPerDay.length ? Math.min(...countsPerDay) : 0;
+  const smokeFreeDays = countsPerDay.filter((count) => count === 0).length;
 
   const peakHour = byHour.indexOf(Math.max(...byHour));
   const peakHourLabel =
@@ -42,13 +60,34 @@ export function computeInsights(logs) {
   for (let back = 6; back >= 0; back--) {
     const date = new Date();
     date.setDate(date.getDate() - back);
-    const key = date.toISOString().slice(0, 10);
+    const key = dayKey(date);
     last7.push({
       date: key,
-      count: (logs[key] || []).length,
+      count: (logs?.[key] ?? []).length,
       label: date.toLocaleDateString(sqLocale(), { weekday: "narrow" }),
     });
   }
 
-  return { total, byHour, days, avgPerDay, bestDay, peakHourLabel, topTriggers, last7 };
+  return {
+    total,
+    byHour,
+    days,
+    avgPerDay,
+    bestDay,
+    smokeFreeDays,
+    peakHourLabel,
+    topTriggers,
+    last7,
+  };
+}
+
+/**
+ * When this person started tracking. Recorded in meta at migration time;
+ * for an account that has not been through that yet, the earliest day with
+ * entries is the best available answer.
+ */
+export function trackingStartedAt(logs, meta) {
+  if (meta?.trackingStartedAt) return meta.trackingStartedAt;
+  const keys = Object.keys(logs ?? {}).sort();
+  return keys.length ? keys[0] : todayKey();
 }

@@ -19,6 +19,10 @@ export default defineConfig({
   use: {
     browserName: "chromium",
     viewport: { width: 390, height: 844 },
+    // Pinned, and deliberately not UTC. A day here is a LOCAL day, and the
+    // bugs that live in that distinction are invisible at offset zero — the
+    // fixture timestamps are written in +03:00 for the same reason.
+    timezoneId: "Asia/Jerusalem",
     hasTouch: true,
     launchOptions: {
       // This environment ships one Chromium, at a fixed path, and cannot

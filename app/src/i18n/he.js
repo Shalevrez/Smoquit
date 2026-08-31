@@ -53,6 +53,9 @@ export const SQ_HE = {
   "≈ {currency}{amount} saved today vs. your usual":
     "≈ {currency}{amount} נחסכו היום לעומת יום רגיל",
   "+ I just smoked one": "\u200f+ עישנתי עכשיו אחת",
+  "I haven't smoked today": "\u200fלא עישנתי היום",
+  "Counted as a smoke-free day ✓": "\u200fנספר כיום נקי ✓",
+  "Smoke-free days": "ימים נקיים",
   "Logging honestly is how the insights get useful.": "תיעוד כן הוא מה שהופך את התובנות למועילות.",
   "Today's timeline": "ציר הזמן של היום",
   "Nothing logged yet today. If a craving comes, try waiting it out — most pass in 3–5 minutes. If you do smoke, tap the button above so you can see your own pattern later.":
@@ -166,7 +169,7 @@ export const SQ_HE = {
   "We set your country automatically when you first opened Smoquit":
     "קבענו את המדינה שלכם אוטומטית כשפתחתם את Smoquit בפעם הראשונה",
   " (you've since changed it)": " (מאז שיניתם אותה)",
-  ". Currency and the product list follow from it. Everything here stays on your device.":
+  ". Currency and the product list follow from it. All of it is saved privately in your account.":
     ". המטבע ורשימת המוצרים נגזרים ממנה. כל מה שכאן נשמר בחשבון הפרטי שלכם.",
   Country: "מדינה",
   "Other ($ USD)": "אחר (\u200e$ USD)",

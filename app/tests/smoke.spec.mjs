@@ -1,14 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────
 //  Does the app still work?
 //
-//  The equivalence suite next door compares rendered markup, which is a
-//  strong check and a blind one: an onChange handler wired to the wrong
-//  name renders perfectly and throws the moment somebody touches it. So
-//  this drives the things people actually do — log a cigarette, tag it,
-//  move its time, change language, change what you smoke — and asserts on
-//  what reaches the database.
-//
-//  Unlike equivalence.spec.mjs, this one outlives the reconstruction.
+//  Drives the things people actually do — log a cigarette, tag it, move its
+//  time, change language, change what you smoke — and asserts on what
+//  reaches the database. Handlers are the part that rendering checks cannot
+//  see: one wired to the wrong name paints perfectly and throws the moment
+//  somebody touches it.
 // ─────────────────────────────────────────────────────────────────────────
 import { test, expect } from "@playwright/test";
 import { fileURLToPath } from "node:url";
@@ -189,4 +186,99 @@ test("an empty account gets the empty states, not a crash", async ({ page }) => 
   await tab(page, "Today");
   await expect(page.getByText(/Nothing logged yet|most cravings pass/)).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+// ── Local days ──────────────────────────────────────────────────────────
+
+test("a cigarette after local midnight belongs to the new day", async ({ page }) => {
+  // 00:30 local. Under the old UTC day key this landed in yesterday east of
+  // Greenwich, and "cigarettes today" only reset hours after midnight.
+  const justAfterMidnight = new Date("2026-09-01T00:30:00+03:00");
+  await page.clock.setFixedTime(justAfterMidnight);
+  const { writes } = await routeSupabase(page);
+  await page.goto(`http://localhost:${PORT}/`);
+  await expect(page.locator("nav")).toBeVisible();
+
+  // A fresh day: nothing logged yet, whatever yesterday held.
+  await expect(page.getByText("Cigarettes today")).toBeVisible();
+  await expect(page.getByText("8 left before target")).toBeVisible();
+
+  await page.getByRole("button", { name: "+ I just smoked one" }).click();
+  await page.getByRole("button", { name: "Stress", exact: true }).click();
+  await page.getByRole("button", { name: "Keep current time" }).click();
+
+  await expect
+    .poll(() => Object.keys([...writes].reverse().find((w) => w.key === "logs")?.value ?? {}))
+    .toContain("2026-09-01");
+});
+
+test("history stored under UTC keys is moved to the local day it happened on", async ({ page }) => {
+  // What the old code wrote: 00:40 on 27 August local (UTC+3) filed under
+  // the 26th, because that is the UTC date.
+  const ts = new Date("2026-08-27T00:40:00+03:00").getTime();
+  const { writes } = await routeSupabase(page, {
+    data: { logs: { "2026-08-26": [{ ts, trigger: "Craving" }] }, meta: undefined },
+  });
+  await page.clock.setFixedTime(NOW);
+  await page.goto(`http://localhost:${PORT}/`);
+  await expect(page.locator("nav")).toBeVisible();
+
+  const written = (key) =>
+    expect.poll(() => [...writes].reverse().find((w) => w.key === key)?.value);
+
+  // The entry moves, the original is kept, and the account is marked done.
+  await written("logs").toEqual({ "2026-08-27": [{ ts, trigger: "Craving" }] });
+  await written("logs_backup_v1").toEqual({ "2026-08-26": [{ ts, trigger: "Craving" }] });
+  await written("meta").toMatchObject({ schemaVersion: 2, trackingStartedAt: "2026-08-27" });
+});
+
+test("an already-migrated account is left alone", async ({ page }) => {
+  const { writes } = await routeSupabase(page, {
+    data: { meta: { schemaVersion: 2, trackingStartedAt: "2026-08-25" } },
+  });
+  await page.clock.setFixedTime(NOW);
+  await page.goto(`http://localhost:${PORT}/`);
+  await expect(page.locator("nav")).toBeVisible();
+  await page.waitForTimeout(500);
+
+  expect(writes.map((w) => w.key)).not.toContain("logs");
+  expect(writes.map((w) => w.key)).not.toContain("logs_backup_v1");
+});
+
+// ── Counting days honestly ──────────────────────────────────────────────
+
+test("a day with nothing logged can be recorded, and counts", async ({ page }) => {
+  const { written } = await open(page, {
+    data: { logs: { "2026-08-29": [{ ts: Date.now(), trigger: "Coffee" }] } },
+  });
+  await page.getByRole("button", { name: "I haven't smoked today" }).click();
+  await expect(page.getByRole("button", { name: /Counted as a smoke-free day/ })).toBeVisible();
+  await written("logs").toMatchObject({ "2026-08-31": { length: 0 } });
+
+  await tab(page, "Insights");
+  await expect(page.getByText("Smoke-free days")).toBeVisible();
+});
+
+test("smoke-free days count the gaps, not just the recorded zeroes", async ({ page }) => {
+  await open(page);
+  await tab(page, "Insights");
+  // The fixture spans 25–31 August: seven tracked days, and the 29th has
+  // no entries at all. It is still a day without a cigarette.
+  const stat = (label) => page.getByText(label, { exact: true }).locator("..");
+  await expect(stat("Days tracked")).toContainText("7");
+  await expect(stat("Smoke-free days")).toContainText("1");
+});
+
+test("the offer to record a clean day goes away once something is logged", async ({ page }) => {
+  await open(page);
+  await expect(page.getByRole("button", { name: "I haven't smoked today" })).toHaveCount(0);
+});
+
+// ── Saying true things ──────────────────────────────────────────────────
+
+test("settings does not claim the data stays on the device", async ({ page }) => {
+  await open(page);
+  await tab(page, "Settings");
+  await expect(page.getByText(/stays on your device/)).toHaveCount(0);
+  await expect(page.getByText(/saved privately in your account/)).toBeVisible();
 });

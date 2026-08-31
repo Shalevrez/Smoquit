@@ -173,14 +173,14 @@ history. It covers logging a cigarette, tagging it, correcting its time,
 undo, the goal and settings forms, switching to Hebrew, and every tab
 loading without throwing.
 
-There is a second suite, tests/equivalence.spec.mjs, that compares the
-rebuilt app against the previously deployed bundle screen by screen. It only
-runs when you point it at a copy of that old build:
+tests/unit/ runs the date and migration logic directly, under several
+timezones — that code was wrong in a way that was invisible in UTC and wrong
+everywhere else, which is exactly the shape of bug a single-timezone suite
+ships:
 
-    SMOQUIT_OLD_BUILD=/path/to/old npx playwright test
-
-It was written to prove that recovering the source from the shipped bundle
-changed nothing, and it can be deleted once that is old news.
+    for tz in UTC Asia/Jerusalem America/Los_Angeles Asia/Kolkata; do
+      TZ=$tz npx playwright test tests/unit
+    done
 
 
 BUMP THE VERSION NUMBER BEFORE EVERY UPLOAD

@@ -9,6 +9,11 @@
 //  Nothing is stored for a signed-out visitor: both calls simply do nothing
 //  without a user id.
 //
+//  saveKey reports whether the write landed. It used to swallow everything
+//  and return undefined, so no caller could tell a failed write from a
+//  successful one — fine when the only thing above it was a click handler,
+//  not fine for anything that has to write in a safe order.
+//
 //  When a read or write fails, window.SMOQUIT_STORAGE_ERROR puts a banner
 //  across the top of the screen naming the cause and printing the database's
 //  own error code. That lives in storage-health.js, a runtime file at the
@@ -43,25 +48,27 @@ export async function loadKey(key, fallback) {
     );
   }
 }
+/** @returns {Promise<boolean>} whether the write actually landed. */
 export async function saveKey(key, value) {
   try {
     const userId = await currentUserId();
-    if (!userId) return;
+    // Signed out: nothing to write to, and nothing went wrong.
+    if (!userId) return false;
     const { error } = await supabase.from("user_data").upsert(
       {
         user_id: userId,
-        key: key,
-        value: value,
+        key,
+        value,
         updated_at: new Date().toISOString(),
       },
-      {
-        onConflict: "user_id,key",
-      },
+      { onConflict: "user_id,key" },
     );
     if (error) throw error;
+    return true;
   } catch (err) {
     console.error("saveKey failed", key, err);
     window.SMOQUIT_STORAGE_ERROR && window.SMOQUIT_STORAGE_ERROR("save", key, err);
+    return false;
   }
 }
 export async function deleteAllData() {

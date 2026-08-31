@@ -76,7 +76,7 @@ export function SettingsTab({ settings, onChange }) {
         {sqT("We set your country automatically when you first opened Smoquit")}
         {settings.country === detectedCountry ? "" : sqT(" (you've since changed it)")}
         {sqT(
-          ". Currency and the product list follow from it. Everything here stays on your device.",
+          ". Currency and the product list follow from it. All of it is saved privately in your account.",
         )}
       </p>
       <label style={fieldLabelStyle}>

@@ -19,6 +19,7 @@ import { countryFor, detectCountry } from "./data/countries.js";
 import { TABS } from "./data/tabs.js";
 import { SQ_LANG, sqIsLang, sqSetLang, sqT, useSqLang } from "./i18n/index.js";
 import { todayKey } from "./lib/dates.js";
+import { migrate } from "./lib/migrate.js";
 import { loadKey, saveKey } from "./lib/storage.js";
 import { BackdateSheet } from "./sheets/BackdateSheet.jsx";
 import { TriggerSheet } from "./sheets/TriggerSheet.jsx";
@@ -31,6 +32,28 @@ import { TodayTab } from "./tabs/TodayTab.jsx";
 import { colors } from "./theme/colors.js";
 import { navStyle, pageStyle, shellStyle, tabStyle } from "./theme/styles.js";
 
+/** Today's key, recomputed whenever the day actually turns over. */
+function useTodayKey() {
+  const [key, setKey] = React.useState(todayKey);
+
+  React.useEffect(() => {
+    const check = () => setKey((prev) => (todayKey() === prev ? prev : todayKey()));
+    // A minute is fine: nothing here needs to notice midnight to the second,
+    // and checking on wake matters more than checking often, because a
+    // backgrounded tab does not get its timers.
+    const timer = setInterval(check, 60000);
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, []);
+
+  return key;
+}
+
 export function AppShell({ user }) {
   useSqLang();
 
@@ -39,14 +62,28 @@ export function AppShell({ user }) {
   const [logs, setLogs] = React.useState({});
   const [goal, setGoal] = React.useState(null);
   const [settings, setSettings] = React.useState(null);
+  const [meta, setMeta] = React.useState(null);
   // Which sheet is up, if any: the trigger picker, then the time picker.
   const [askingTrigger, setAskingTrigger] = React.useState(null);
   const [backdating, setBackdating] = React.useState(null);
 
   React.useEffect(() => {
     (async () => {
-      setLogs(await loadKey("logs", {}));
-      setGoal(await loadKey("goal", null));
+      // One round trip each, in parallel: the three rows do not depend on
+      // one another, and doing them in sequence made the loading screen
+      // three times as long as it needed to be.
+      const [storedLogs, storedGoal, storedMeta] = await Promise.all([
+        loadKey("logs", {}),
+        loadKey("goal", null),
+        loadKey("meta", null),
+      ]);
+
+      // Entries used to be filed by UTC date; put them under the local day
+      // they actually happened on before anything reads them.
+      const migrated = await migrate(storedLogs, storedMeta);
+      setLogs(migrated.logs);
+      setMeta(migrated.meta);
+      setGoal(storedGoal);
 
       let saved = await loadKey("settings", null);
       if (!saved) {
@@ -82,7 +119,10 @@ export function AppShell({ user }) {
     });
   }, []);
 
-  const dayKey = todayKey();
+  // Recomputed on a tick rather than only on render: a phone left open on
+  // this screen overnight would otherwise keep filing tomorrow's cigarettes
+  // under yesterday, which is the same bug the local day key just fixed.
+  const dayKey = useTodayKey();
   const todayLogs = logs[dayKey] || [];
 
   // Every write below rewrites the whole logs blob, because that is what a
@@ -117,6 +157,18 @@ export function AppShell({ user }) {
     },
     [dayKey],
   );
+
+  // A day with nothing logged looks exactly like a day the app was never
+  // opened. This is how someone says which one it was — an empty array is a
+  // real, recorded zero.
+  const markNoneToday = React.useCallback(() => {
+    setLogs((prev) => {
+      if (prev[dayKey]?.length) return prev;
+      const next = { ...prev, [dayKey]: [] };
+      saveKey("logs", next);
+      return next;
+    });
+  }, [dayKey]);
 
   const removeLog = React.useCallback(
     (index) => {
@@ -192,9 +244,11 @@ export function AppShell({ user }) {
               settings={settings}
               onAsk={() => setAskingTrigger(true)}
               onRemove={removeLog}
+              onNoneToday={markNoneToday}
+              markedNoneToday={Array.isArray(logs[dayKey]) && logs[dayKey].length === 0}
             />
           )}
-          {tab === "insights" && <InsightsTab logs={logs} />}
+          {tab === "insights" && <InsightsTab logs={logs} meta={meta} />}
           {tab === "tips" && <TipsTab />}
           {tab === "habits" && <HabitsTab />}
           {tab === "goal" && (
