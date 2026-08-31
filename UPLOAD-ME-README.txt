@@ -4,11 +4,22 @@ Smoquit — READY TO DEPLOY
 Keys are already filled in (config.js has your Project URL and anon key).
 Two things still need doing:
 
-1. RUN THE DATABASE SETUP (once)
+1. RUN THE DATABASE SETUP
    - In your Supabase project: SQL Editor → New query
    - Paste the contents of supabase-schema.sql → Run
    - This creates the per-user table + security rules.
-   - It is safe to run twice; if you already did this, skip it.
+   - It is safe to run again at any time, and re-running is the first thing
+     to try if saving stops working.
+   - CHECK THAT IT ACTUALLY TOOK. The SQL Editor runs the whole script as one
+     transaction, so a single error rolls back everything — including the
+     table — and it is easy to miss. Run this afterwards; it should return
+     four rows:
+
+        select policyname, cmd from pg_policies
+        where schemaname = 'public' and tablename = 'user_data';
+
+     No rows, or an error about "relation ... does not exist", means the
+     setup did not take. Run supabase-schema.sql again and read the output.
 
 2. DEPLOY
    - This repo is connected to Netlify (project "smoquit"). Merging into the
@@ -18,7 +29,8 @@ Two things still need doing:
      is ever created. Work reaches the live site by being merged, not by
      getting a side link of its own.
    - Deploying by hand instead? Upload the CONTENTS of this folder
-     (index.html, assets/, config.js, _redirects — all of it), not the folder.
+     (index.html, assets/, config.js, storage-health.js, _redirects — all of
+     it), not the folder.
    - _redirects is what keeps deep links working on a single-page app.
      Netlify reads it natively; so does Cloudflare Pages if you ever move.
 
@@ -63,6 +75,28 @@ Turning it on is done in the dashboards, not in this code:
 
 Reload the app — "Continue with Google" appears on its own, no rebuild needed.
 The same steps work for Apple under Authentication → Providers → Apple.
+
+
+IF YOUR DATA ISN'T SAVING
+-------------------------
+Signing in works, you log a few cigarettes, you come back later and it is all
+gone. That is almost always step 1 above: the user_data table is missing, so
+every write is rejected by the database.
+
+The app now says so out loud. When a read or write fails, a red banner appears
+across the top of the screen naming the cause and the fix — that is
+storage-health.js, and it is why that file has to be uploaded along with the
+rest. Previously these failures went only to the browser console, so the app
+looked like it was working right up until you reloaded it.
+
+To confirm the diagnosis yourself: open the site, press F12 → Console, and
+look for "saveKey failed". The error next to it is the database's own words.
+"Could not find the table 'public.user_data'" means run supabase-schema.sql.
+
+Also worth checking, if the banner never appears but data still looks wrong:
+Supabase → Authentication → Users, and confirm you are signing in as the
+account you think you are. Data is stored per user id, so signing up a second
+time with a different address gives you a second, empty account.
 
 
 NOTE ON THE KEY:
