@@ -5,6 +5,7 @@
 import React from "react";
 import { Stat } from "../components/Stat.jsx";
 import { countryFor } from "../data/countries.js";
+import { countOn } from "../domain/entries.js";
 import { sqT } from "../i18n/index.js";
 import { saveKey } from "../lib/storage.js";
 import { colors } from "../theme/colors.js";
@@ -46,9 +47,9 @@ export function GoalTab({ goal, setGoal, logs, settings }) {
       // Every tracked day contributes the cigarettes NOT smoked that day
       // against the old baseline, priced one at a time.
       let saved = 0;
-      Object.values(logs).forEach((day) => {
-        saved += Math.max(0, goal.baseline - day.length) * pricePerCigarette;
-      });
+      for (const key of Object.keys(logs ?? {})) {
+        saved += Math.max(0, goal.baseline - countOn(logs, key)) * pricePerCigarette;
+      }
       return saved;
     }, [goal, logs, pricePerCigarette]);
   return (

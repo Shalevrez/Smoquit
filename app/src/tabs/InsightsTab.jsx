@@ -35,11 +35,7 @@ export function InsightsTab({ logs, meta }) {
         <Stat label={sqT("Logged total")} value={insights.total} />
         <Stat label={sqT("Daily average")} value={insights.avgPerDay.toFixed(1)} />
         <Stat label={sqT("Days tracked")} value={insights.days} />
-        <Stat
-          label={sqT("Smoke-free days")}
-          value={insights.smokeFreeDays}
-          accent={colors.moss}
-        />
+        <Stat label={sqT("Smoke-free days")} value={insights.smokeFreeDays} accent={colors.moss} />
         <Stat label={sqT("Best (lowest) day")} value={insights.bestDay} accent={colors.moss} />
       </div>
       <h3 style={sectionHeadingStyle}>{sqT("When you smoke")}</h3>

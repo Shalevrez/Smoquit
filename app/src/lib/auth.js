@@ -14,6 +14,8 @@
 
 import React from "react";
 import { sqT } from "../i18n/index.js";
+import { clearCache } from "./cache.js";
+import { currentUserId } from "./storage.js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from "./supabase.js";
 export function useAuth() {
   const [t, e] = React.useState(null),
@@ -57,6 +59,10 @@ export async function signInWithProvider(provider) {
   });
 }
 export async function signOut() {
+  // Clear the local copy first, while the user id is still knowable. A
+  // cache that outlives the session would show one person's history to
+  // whoever signs in next on the same phone.
+  clearCache(await currentUserId());
   return supabase.auth.signOut();
 }
 export async function fetchEnabledProviders() {

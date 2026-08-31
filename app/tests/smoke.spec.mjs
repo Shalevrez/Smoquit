@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "./serve.mjs";
-import { routeSupabase, NOW, LOGS, GOAL } from "./fixtures.mjs";
+import { routeSupabase, NOW, LOGS, GOAL, SUPABASE_HOST } from "./fixtures.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PORT = 5010;
@@ -99,12 +99,17 @@ test("skipping the trigger still counts the cigarette", async ({ page }) => {
 });
 
 test("undo removes the right entry", async ({ page }) => {
-  const { written } = await open(page);
-  // The timeline is newest first; undo the top row, which is 11:30.
+  const { writes } = await open(page);
+  // The timeline is newest first; undo the top row, which is 11:30. The
+  // entry stays as a tombstone (see domain/entries.js) — what has to be
+  // gone is the cigarette, not the record that it was deleted.
   await page.getByRole("button", { name: "Remove this entry" }).first().click();
-  await written("logs").toMatchObject({
-    "2026-08-31": { length: 1, 0: { trigger: "Coffee" } },
-  });
+  await expect
+    .poll(() => {
+      const logs = [...writes].reverse().find((w) => w.key === "logs")?.value ?? {};
+      return (logs["2026-08-31"] ?? []).filter((e) => !e.d).map((e) => e.trigger);
+    })
+    .toEqual(["Coffee"]);
 });
 
 test("insights read out of the log", async ({ page }) => {
@@ -281,4 +286,71 @@ test("settings does not claim the data stays on the device", async ({ page }) =>
   await tab(page, "Settings");
   await expect(page.getByText(/stays on your device/)).toHaveCount(0);
   await expect(page.getByText(/saved privately in your account/)).toBeVisible();
+});
+
+// ── Working without a network ───────────────────────────────────────────
+
+test("a cigarette logged with no signal is not lost", async ({ page, context }) => {
+  const { writes } = await open(page);
+
+  await context.setOffline(true);
+  for (const trigger of ["Stress", "Boredom"]) {
+    await page.getByRole("button", { name: "+ I just smoked one" }).click();
+    await page.getByRole("button", { name: trigger, exact: true }).click();
+    await page.getByRole("button", { name: "Keep current time" }).click();
+  }
+
+  // On screen immediately, whatever the network is doing.
+  await expect(page.getByText("4", { exact: true }).first()).toBeVisible();
+  // And no red banner: a dropped connection is not a misconfigured database.
+  await expect(page.locator("#smoquit-storage-banner")).toHaveCount(0);
+
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+
+  await expect
+    .poll(() => {
+      const logs = [...writes].reverse().find((w) => w.key === "logs")?.value ?? {};
+      return (logs["2026-08-31"] ?? []).filter((e) => !e.d).length;
+    })
+    .toBe(4);
+});
+
+test("the app opens from its local copy when the database is unreachable", async ({ page }) => {
+  await open(page);
+  await expect(page.getByText("Cigarettes today")).toBeVisible();
+  await expect(page.getByText("6 left before target")).toBeVisible();
+
+  // Cut off Supabase specifically rather than the whole network: serving
+  // the page itself without a connection is the service worker's job, and
+  // it does not exist yet. What is being checked here is that the DATA
+  // survives an unreachable database.
+  await page.route(`${SUPABASE_HOST}/rest/**`, (route) => route.abort("connectionfailed"));
+  await page.reload();
+
+  await expect(page.locator("nav")).toBeVisible();
+  await expect(page.getByText("6 left before target")).toBeVisible();
+  // Still no banner: unreachable is not misconfigured.
+  await expect(page.locator("#smoquit-storage-banner")).toHaveCount(0);
+});
+
+test("undo leaves a mark, so a delete is not undone by a sync", async ({ page }) => {
+  const { written } = await open(page);
+  await page.getByRole("button", { name: "Remove this entry" }).first().click();
+
+  // One live entry on screen, and the deletion recorded rather than erased.
+  await expect(page.getByText("1", { exact: true }).first()).toBeVisible();
+  await written("logs").toMatchObject({
+    "2026-08-31": { length: 2, 1: { d: 1 } },
+  });
+});
+
+test("signing out does not leave the account cached on the device", async ({ page }) => {
+  await open(page);
+  const cachedKeys = () =>
+    page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("smoquit.cache.")));
+  expect(await cachedKeys()).not.toHaveLength(0);
+
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect.poll(cachedKeys).toHaveLength(0);
 });

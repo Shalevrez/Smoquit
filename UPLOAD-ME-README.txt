@@ -183,6 +183,33 @@ ships:
     done
 
 
+WORKING WITHOUT A SIGNAL
+------------------------
+The app keeps a copy of your data in the browser, so it opens instantly and
+keeps working when the connection does not. A cigarette logged in a
+stairwell is logged; it reaches your account when there is a connection to
+reach it with, and until then it sits in a queue that is retried when the
+browser comes back online and again on the next start.
+
+Two consequences worth knowing:
+
+  • The red storage banner no longer appears for an ordinary dropped
+    connection — only for a failure you can actually do something about (a
+    missing table, a missing grant, a rejected token). That is deliberate.
+    A banner that cries wolf every time somebody walks into a lift is a
+    banner nobody reads when the database really is misconfigured.
+
+  • Undo marks an entry deleted rather than erasing it, and the mark is
+    cleared out after a month. This matters only if you use two devices:
+    when they sync, entries are combined rather than one side overwriting
+    the other, and without the mark a deletion made on one device would be
+    undone by the other simply not knowing about it yet.
+
+The local copy is per account and is cleared when you sign out or use
+"Delete all my data", so a shared phone never shows one person's history to
+the next.
+
+
 BUMP THE VERSION NUMBER BEFORE EVERY UPLOAD
 -------------------------------------------
 version.js holds two lines — the version and the build date — and shows them

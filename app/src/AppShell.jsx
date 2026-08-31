@@ -18,9 +18,10 @@ import { Header } from "./components/Header.jsx";
 import { countryFor, detectCountry } from "./data/countries.js";
 import { TABS } from "./data/tabs.js";
 import { SQ_LANG, sqIsLang, sqSetLang, sqT, useSqLang } from "./i18n/index.js";
+import { countOn, entriesOn, markDeleted } from "./domain/entries.js";
 import { todayKey } from "./lib/dates.js";
 import { migrate } from "./lib/migrate.js";
-import { loadKey, saveKey } from "./lib/storage.js";
+import * as store from "./lib/store.js";
 import { BackdateSheet } from "./sheets/BackdateSheet.jsx";
 import { TriggerSheet } from "./sheets/TriggerSheet.jsx";
 import { GoalTab } from "./tabs/GoalTab.jsx";
@@ -68,24 +69,40 @@ export function AppShell({ user }) {
   const [backdating, setBackdating] = React.useState(null);
 
   React.useEffect(() => {
+    const stopWatching = store.watchConnection();
+
     (async () => {
-      // One round trip each, in parallel: the three rows do not depend on
-      // one another, and doing them in sequence made the loading screen
-      // three times as long as it needed to be.
-      const [storedLogs, storedGoal, storedMeta] = await Promise.all([
-        loadKey("logs", {}),
-        loadKey("goal", null),
-        loadKey("meta", null),
+      await store.openStore();
+
+      // Paint from the local copy before asking the network anything. With
+      // a cache this is instant and works with no signal; without one it is
+      // the same loading screen as before.
+      const cachedLogs = store.cached("logs", {});
+      const cachedSettings = store.cached("settings", null);
+      if (cachedSettings) {
+        sqSetLang(cachedSettings.lang);
+        setSettings(cachedSettings);
+        setLogs(cachedLogs);
+        setGoal(store.cached("goal", null));
+        setMeta(store.cached("meta", null));
+        setReady(true);
+      }
+
+      const [freshLogs, freshGoal, freshMeta, freshSettings] = await Promise.all([
+        store.refresh("logs", {}),
+        store.refresh("goal", null),
+        store.refresh("meta", null),
+        store.refresh("settings", null),
       ]);
 
       // Entries used to be filed by UTC date; put them under the local day
       // they actually happened on before anything reads them.
-      const migrated = await migrate(storedLogs, storedMeta);
+      const migrated = await migrate(freshLogs.value ?? {}, freshMeta.value);
       setLogs(migrated.logs);
       setMeta(migrated.meta);
-      setGoal(storedGoal);
+      setGoal(freshGoal.value);
 
-      let saved = await loadKey("settings", null);
+      let saved = freshSettings.value;
       if (!saved) {
         // First run: guess a country, take its most common pack as the
         // starting price, and write it down so the guess is only made once.
@@ -97,24 +114,26 @@ export function AppShell({ user }) {
           pricePerPack: product.p,
           lang: SQ_LANG,
         };
-        saveKey("settings", saved);
+        store.write("settings", saved);
       } else if (!sqIsLang(saved.lang)) {
         // An account saved before the app spoke Hebrew: adopt whatever this
         // browser is showing and write it back, so it is pinned from now on.
         saved = { ...saved, lang: SQ_LANG };
-        saveKey("settings", saved);
+        store.write("settings", saved);
       }
 
       sqSetLang(saved.lang);
       setSettings(saved);
       setReady(true);
     })();
+
+    return stopWatching;
   }, []);
 
   const updateSettings = React.useCallback((changes) => {
     setSettings((prev) => {
       const next = { ...prev, ...changes };
-      saveKey("settings", next);
+      store.write("settings", next);
       return next;
     });
   }, []);
@@ -123,7 +142,7 @@ export function AppShell({ user }) {
   // this screen overnight would otherwise keep filing tomorrow's cigarettes
   // under yesterday, which is the same bug the local day key just fixed.
   const dayKey = useTodayKey();
-  const todayLogs = logs[dayKey] || [];
+  const todayLogs = entriesOn(logs, dayKey);
 
   // Every write below rewrites the whole logs blob, because that is what a
   // single jsonb row is. Fine at the scale one person can smoke.
@@ -131,10 +150,10 @@ export function AppShell({ user }) {
     (trigger) => {
       const ts = Date.now();
       setLogs((prev) => {
-        const today = prev[dayKey] ? [...prev[dayKey]] : [];
+        const today = [...(prev[dayKey] ?? [])];
         today.push({ ts, trigger });
         const next = { ...prev, [dayKey]: today };
-        saveKey("logs", next);
+        store.write("logs", next);
         return next;
       });
       return ts;
@@ -145,13 +164,13 @@ export function AppShell({ user }) {
   const editLogTime = React.useCallback(
     (fromTs, toTs) => {
       setLogs((prev) => {
-        const today = [...(prev[dayKey] || [])];
-        const index = today.findIndex((entry) => entry.ts === fromTs);
+        const today = [...(prev[dayKey] ?? [])];
+        const index = today.findIndex((entry) => entry.ts === fromTs && !entry.d);
         if (index === -1) return prev;
         today[index] = { ...today[index], ts: toTs };
         today.sort((a, b) => a.ts - b.ts);
         const next = { ...prev, [dayKey]: today };
-        saveKey("logs", next);
+        store.write("logs", next);
         return next;
       });
     },
@@ -163,9 +182,9 @@ export function AppShell({ user }) {
   // real, recorded zero.
   const markNoneToday = React.useCallback(() => {
     setLogs((prev) => {
-      if (prev[dayKey]?.length) return prev;
+      if (countOn(prev, dayKey) > 0) return prev;
       const next = { ...prev, [dayKey]: [] };
-      saveKey("logs", next);
+      store.write("logs", next);
       return next;
     });
   }, [dayKey]);
@@ -173,10 +192,8 @@ export function AppShell({ user }) {
   const removeLog = React.useCallback(
     (index) => {
       setLogs((prev) => {
-        const today = [...(prev[dayKey] || [])];
-        today.splice(index, 1);
-        const next = { ...prev, [dayKey]: today };
-        saveKey("logs", next);
+        const next = { ...prev, [dayKey]: markDeleted(prev[dayKey], index) };
+        store.write("logs", next);
         return next;
       });
     },
@@ -245,7 +262,7 @@ export function AppShell({ user }) {
               onAsk={() => setAskingTrigger(true)}
               onRemove={removeLog}
               onNoneToday={markNoneToday}
-              markedNoneToday={Array.isArray(logs[dayKey]) && logs[dayKey].length === 0}
+              markedNoneToday={Array.isArray(logs[dayKey]) && todayLogs.length === 0}
             />
           )}
           {tab === "insights" && <InsightsTab logs={logs} meta={meta} />}

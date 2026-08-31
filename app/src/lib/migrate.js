@@ -29,6 +29,7 @@
 //  larger change — and it is the right answer for the ordinary case.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { sweepTombstones } from "../domain/entries.js";
 import { dayKey } from "./dates.js";
 import { saveKey } from "./storage.js";
 
@@ -84,36 +85,41 @@ async function run(logs, meta) {
   if (version >= SCHEMA_VERSION) return { logs, meta };
 
   const { logs: rebucketed, moved } = rebucketByLocalDay(logs);
+  // Deletions older than a month have long since reached every device.
+  const { logs: swept, dropped } = sweepTombstones(rebucketed);
   const next = {
     ...meta,
     schemaVersion: SCHEMA_VERSION,
     migratedAt: new Date().toISOString(),
     // When tracking began, so that a day with no cigarettes can be counted
     // as a real zero rather than being invisible for having no entries.
-    trackingStartedAt: meta?.trackingStartedAt ?? earliestDay(rebucketed),
+    trackingStartedAt: meta?.trackingStartedAt ?? earliestDay(swept),
   };
 
   const hasHistory = Object.keys(logs ?? {}).length > 0;
 
-  if (moved > 0) {
+  if (moved > 0 || dropped > 0) {
     if (!(await saveKey(BACKUP_KEY, logs))) {
       console.warn("migrate: could not save a backup, leaving the data alone");
       return { logs, meta };
     }
-    if (!(await saveKey("logs", rebucketed))) {
+    if (!(await saveKey("logs", swept))) {
       console.warn("migrate: could not write the re-bucketed logs, leaving the data alone");
       return { logs, meta };
     }
-    console.info(`migrate: moved ${moved} entr${moved === 1 ? "y" : "ies"} to their local day`);
+    console.info(
+      `migrate: moved ${moved} entr${moved === 1 ? "y" : "ies"} to their local day` +
+        (dropped ? `, swept ${dropped} old deletion(s)` : ""),
+    );
   }
 
   // Record the version last, and only if it sticks. An unversioned account
   // is safe — it just migrates again — whereas one marked done that never
   // finished is not.
   if (!(await saveKey("meta", next)) && hasHistory) {
-    return { logs: moved > 0 ? rebucketed : logs, meta };
+    return { logs: moved > 0 || dropped > 0 ? swept : logs, meta };
   }
-  return { logs: moved > 0 ? rebucketed : logs, meta: next };
+  return { logs: moved > 0 || dropped > 0 ? swept : logs, meta: next };
 }
 
 /** Test seam: forget any in-flight run. */

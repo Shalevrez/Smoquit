@@ -17,10 +17,11 @@
 
 import { SQ_LANG, sqLocale } from "../i18n/index.js";
 import { dayKey, dayKeysBetween, todayKey } from "../lib/dates.js";
+import { allEntries, countOn } from "./entries.js";
 export function computeInsights(logs, meta) {
-  const entries = [];
-  Object.values(logs ?? {}).forEach((day) => day.forEach((entry) => entries.push(entry)));
-
+  // Deleted entries are still in the blob as tombstones — see
+  // domain/entries.js — and must never be counted as cigarettes.
+  const entries = allEntries(logs);
   const total = entries.length;
   const byHour = new Array(24).fill(0);
   const triggerCounts = {};
@@ -38,7 +39,7 @@ export function computeInsights(logs, meta) {
   // nothing logged — those are the good days.
   const startedAt = trackingStartedAt(logs, meta);
   const trackedKeys = dayKeysBetween(startedAt, todayKey());
-  const countsPerDay = trackedKeys.map((key) => (logs?.[key] ?? []).length);
+  const countsPerDay = trackedKeys.map((key) => countOn(logs, key));
   const days = Math.max(trackedKeys.length, 1);
   const avgPerDay = total / days;
   const bestDay = countsPerDay.length ? Math.min(...countsPerDay) : 0;
@@ -63,7 +64,7 @@ export function computeInsights(logs, meta) {
     const key = dayKey(date);
     last7.push({
       date: key,
-      count: (logs?.[key] ?? []).length,
+      count: countOn(logs, key),
       label: date.toLocaleDateString(sqLocale(), { weekday: "narrow" }),
     });
   }
