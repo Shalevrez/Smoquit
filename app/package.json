@@ -1,0 +1,29 @@
+{
+  "name": "smoquit",
+  "private": true,
+  "version": "1.2.0",
+  "type": "module",
+  "description": "Smoquit \u2014 a quiet companion for putting cigarettes down.",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/clean-assets.mjs && vite build && node scripts/check-output.mjs && node scripts/check-i18n.mjs && eslint .",
+    "check": "node scripts/check-output.mjs && node scripts/check-i18n.mjs",
+    "preview": "vite preview",
+    "lint": "eslint . && prettier --check \"src/**/*.{js,jsx}\"",
+    "test": "playwright test",
+    "format": "prettier --write \"src/**/*.{js,jsx}\" \"scripts/**/*.mjs\" \"tests/**/*.mjs\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.112.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.39.5",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
+    "vite": "^5.4.11"
+  }
+}

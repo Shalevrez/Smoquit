@@ -2,9 +2,9 @@
 //  Smoquit — version badge
 //
 //  Shows the build number in the bottom-left corner of every screen, so you
-//  can tell at a glance WHICH upload you are actually looking at. Netlify
-//  deploys and browser caches both lie occasionally; a number on the screen
-//  does not.
+//  can tell at a glance WHICH upload you are actually looking at. Deploys
+//  and browser caches both lie occasionally; a number on the screen does
+//  not.
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │  BUMP THESE TWO LINES BEFORE EVERY UPLOAD.                          │
@@ -18,7 +18,7 @@
 //  rebuild — edit, upload, done.
 // ─────────────────────────────────────────────────────────────────────────
 (function () {
-  var VERSION = "1.1.0";
+  var VERSION = "1.5.0";
   var BUILT   = "2026-08-31";
 
   // Readable from the console too: just type SMOQUIT_VERSION.

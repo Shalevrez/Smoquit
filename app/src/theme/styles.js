@@ -1,0 +1,393 @@
+// ─────────────────────────────────────────────────────────────────────────
+//  Every shared style object in the app.
+//
+//  There is no CSS framework and almost no stylesheet — a little over 200
+//  bytes of reset, and everything else is a plain object handed to a style
+//  prop. Keeping the shared ones together is what the built bundle did too;
+//  the difference is that here they have names.
+//
+//  Two consequences worth knowing:
+//    • layout uses flex and gap rather than margin-left, so right-to-left
+//      mirrors for free;
+//    • anything that must NOT mirror — the Latin wordmark, a time axis —
+//      sets direction: "ltr" explicitly.
+// ─────────────────────────────────────────────────────────────────────────
+
+import { colors } from "./colors.js";
+export const pageStyle = {
+  minHeight: "100vh",
+  background: colors.breath,
+  fontFamily: "'Helvetica Neue', Arial, sans-serif",
+  color: colors.ink,
+  padding: "0",
+};
+export const shellStyle = {
+  maxWidth: 480,
+  margin: "0 auto",
+  minHeight: "100vh",
+  background: colors.paper,
+  boxShadow: "0 0 40px rgba(0,0,0,.04)",
+};
+export const headerStyle = {
+  padding: "26px 20px 16px",
+  borderBottom: `1px solid ${colors.line}`,
+};
+export const wordmarkStyle = {
+  direction: "ltr",
+  fontSize: 30,
+  fontWeight: 800,
+  letterSpacing: -1,
+  fontFamily: "Georgia, serif",
+};
+export const taglineStyle = {
+  margin: "10px 0 0",
+  fontSize: 13.5,
+  color: colors.ash,
+  lineHeight: 1.5,
+};
+export const navStyle = {
+  display: "flex",
+  gap: 4,
+  padding: "0 12px",
+  borderBottom: `1px solid ${colors.line}`,
+  position: "sticky",
+  top: 0,
+  background: colors.paper,
+  zIndex: 5,
+  overflowX: "auto",
+};
+export const tabStyle = {
+  background: "none",
+  border: "none",
+  padding: "13px 12px 11px",
+  fontSize: 14,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+export const counterCardStyle = {
+  background: colors.breath,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 14,
+  padding: "22px 20px",
+  textAlign: "center",
+  marginBottom: 26,
+};
+export const bigNumberStyle = {
+  fontSize: 64,
+  fontWeight: 800,
+  lineHeight: 1,
+  margin: "6px 0 14px",
+  fontFamily: "Georgia, serif",
+  color: colors.ink,
+};
+export const barTrackStyle = {
+  height: 8,
+  background: colors.line,
+  borderRadius: 6,
+  overflow: "hidden",
+  marginTop: 4,
+};
+export const barFillStyle = {
+  height: "100%",
+  borderRadius: 6,
+  transition: "width .4s ease",
+};
+export const primaryButtonStyle = {
+  marginTop: 18,
+  width: "100%",
+  background: colors.ember,
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  padding: "14px",
+  fontSize: 16,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+export const sectionHeadingStyle = {
+  fontSize: 13,
+  textTransform: "uppercase",
+  letterSpacing: 1.2,
+  color: colors.ash,
+  margin: "26px 0 12px",
+  fontWeight: 700,
+};
+export const emptyBoxStyle = {
+  fontSize: 14,
+  color: colors.smoke,
+  lineHeight: 1.6,
+  background: colors.breath,
+  border: `1px dashed ${colors.line}`,
+  borderRadius: 12,
+  padding: "18px 16px",
+};
+export const timelineRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  padding: "12px 4px",
+  borderBottom: `1px solid ${colors.line}`,
+};
+export const triggerChipStyle = {
+  fontSize: 12,
+  color: colors.smoke,
+  background: colors.breath,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 20,
+  padding: "3px 10px",
+  flex: 1,
+};
+export const undoButtonStyle = {
+  background: "none",
+  border: "none",
+  color: colors.ash,
+  fontSize: 12,
+  cursor: "pointer",
+  textDecoration: "underline",
+};
+export const sheetBackdropStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(28,27,24,.4)",
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "center",
+  zIndex: 50,
+};
+export const sheetPanelStyle = {
+  background: colors.paper,
+  borderRadius: "18px 18px 0 0",
+  padding: "22px 20px 30px",
+  width: "100%",
+  maxWidth: 480,
+  animation: "rise .25s ease",
+};
+export const chipButtonStyle = {
+  background: colors.breath,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 22,
+  padding: "9px 16px",
+  fontSize: 14,
+  color: colors.smoke,
+  cursor: "pointer",
+};
+export const statGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 10,
+  marginBottom: 6,
+};
+export const statCardStyle = {
+  background: colors.breath,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 12,
+  padding: "14px 16px",
+};
+export const hourChartStyle = {
+  display: "flex",
+  alignItems: "flex-end",
+  gap: 2,
+  height: 110,
+  borderBottom: `1px solid ${colors.line}`,
+  paddingBottom: 2,
+};
+export const tipRowStyle = {
+  display: "flex",
+  gap: 14,
+  padding: "16px 0",
+  borderBottom: `1px solid ${colors.line}`,
+  alignItems: "flex-start",
+};
+export const tipNumberStyle = {
+  fontFamily: "Georgia, serif",
+  fontSize: 20,
+  fontWeight: 700,
+  color: colors.emberSoft,
+  minWidth: 30,
+};
+export const disclaimerStyle = {
+  marginTop: 22,
+  fontSize: 12,
+  color: colors.ash,
+  lineHeight: 1.55,
+  borderTop: `1px solid ${colors.line}`,
+  paddingTop: 16,
+};
+export const habitCardStyle = {
+  background: colors.breath,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 12,
+  padding: "14px 16px",
+  marginBottom: 10,
+};
+export const habitTagStyle = {
+  fontSize: 10,
+  textTransform: "uppercase",
+  letterSpacing: 1,
+  fontWeight: 700,
+  background: colors.emberSoft,
+  color: colors.ember,
+  borderRadius: 6,
+  padding: "3px 7px",
+  whiteSpace: "nowrap",
+};
+export const reasonCardStyle = {
+  background: colors.mossSoft,
+  borderRadius: 14,
+  padding: "18px 20px",
+  marginBottom: 16,
+};
+export const formStackStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 16,
+  marginTop: 8,
+};
+export const fieldLabelStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+  fontSize: 13,
+  fontWeight: 600,
+  color: colors.smoke,
+};
+export const inputStyle = {
+  border: `1px solid ${colors.line}`,
+  borderRadius: 10,
+  padding: "11px 12px",
+  fontSize: 15,
+  color: colors.ink,
+  background: colors.paper,
+  fontWeight: 400,
+};
+export const saveButtonStyle = {
+  background: colors.moss,
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  padding: "14px",
+  fontSize: 16,
+  fontWeight: 700,
+  cursor: "pointer",
+  marginTop: 4,
+};
+export const hintStyle = {
+  fontSize: 12.5,
+  color: colors.ash,
+  lineHeight: 1.5,
+  marginTop: 8,
+};
+export const centerPage = {
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+  background: "#F5F3EE",
+};
+export const configCard = {
+  maxWidth: 420,
+  background: "#fff",
+  border: "1px solid #E3DFD5",
+  borderRadius: 16,
+  padding: "28px 24px",
+};
+export const authPageStyle = {
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+  background: colors.breath,
+};
+export const authCardStyle = {
+  width: "100%",
+  maxWidth: 380,
+  background: colors.paper,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 18,
+  padding: "32px 26px",
+  boxShadow: "0 10px 40px rgba(0,0,0,.05)",
+};
+export const authWordmarkStyle = {
+  direction: "ltr",
+  fontSize: 34,
+  fontWeight: 800,
+  letterSpacing: -1,
+  fontFamily: "Georgia, serif",
+  color: colors.ink,
+};
+export const authTaglineStyle = {
+  textAlign: "center",
+  fontSize: 13.5,
+  color: colors.ash,
+  lineHeight: 1.5,
+  margin: "4px 0 0",
+};
+export const authProviderButtonStyle = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: 10,
+  border: `1px solid ${colors.line}`,
+  background: colors.paper,
+  color: colors.ink,
+  fontSize: 15,
+  fontWeight: 600,
+  cursor: "pointer",
+};
+export const authDividerStyle = {
+  display: "flex",
+  alignItems: "center",
+  textAlign: "center",
+  margin: "18px 0",
+  borderTop: `1px solid ${colors.line}`,
+  position: "relative",
+};
+export const authDividerLabelStyle = {
+  position: "absolute",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  background: colors.paper,
+  padding: "0 10px",
+  fontSize: 12,
+  color: colors.ash,
+};
+export const authInputStyle = {
+  width: "100%",
+  padding: "12px",
+  border: `1px solid ${colors.line}`,
+  borderRadius: 10,
+  fontSize: 15,
+  marginBottom: 10,
+  color: colors.ink,
+  background: colors.paper,
+};
+export const authSubmitStyle = {
+  width: "100%",
+  padding: "13px",
+  borderRadius: 10,
+  border: "none",
+  background: colors.ember,
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: 700,
+  cursor: "pointer",
+  marginTop: 2,
+};
+export const authToggleStyle = {
+  width: "100%",
+  marginTop: 14,
+  background: "none",
+  border: "none",
+  color: colors.smoke,
+  fontSize: 13,
+  cursor: "pointer",
+  textDecoration: "underline",
+};
+export const authPrivacyStyle = {
+  fontSize: 11.5,
+  color: colors.ash,
+  lineHeight: 1.5,
+  marginTop: 18,
+  textAlign: "center",
+};

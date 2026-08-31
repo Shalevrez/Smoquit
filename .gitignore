@@ -1,0 +1,6 @@
+# Dependencies and test output. Everything else in this directory IS the
+# deployed site — index.html and assets/ are build output and are committed
+# on purpose, because Cloudflare Pages serves this folder with no build step.
+node_modules/
+test-results/
+playwright-report/
