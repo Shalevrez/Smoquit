@@ -6,7 +6,32 @@
     <meta name="theme-color" content="#F5F3EE" />
     <title>Smoquit — quit smoking, one logged craving at a time</title>
     <meta name="description" content="A quiet companion for putting cigarettes down. Track, notice the pattern, loosen its grip." />
-    <script type="module" crossorigin src="/assets/index-EhGN5cfw.js"></script>
+    <!--
+      Language, before the first paint. The app keeps the chosen language in
+      the user's account, and mirrors it into localStorage — reading it here
+      means an RTL page starts out RTL, instead of flipping once the bundle
+      has booted. Kept in step with sqDetectLang() in the bundle.
+    -->
+    <script>
+      (function () {
+        try {
+          var lang = localStorage.getItem("smoquit.lang");
+          if (lang !== "he" && lang !== "en") {
+            var nav = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+            lang = /^(he|iw)\b/i.test(nav) ? "he" : "en";
+          }
+          var root = document.documentElement;
+          root.lang = lang;
+          root.dir = lang === "he" ? "rtl" : "ltr";
+          if (lang === "he") {
+            document.title = "Smoquit — נגמלים מעישון, סיגריה מתועדת אחת בכל פעם";
+          }
+        } catch (e) {
+          /* A language preference is never worth breaking the page over. */
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-8FuNLQk4.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-v5ImS6Du.css">
   </head>
   <body>
