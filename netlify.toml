@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────
+#  Smoquit — deploy settings
+#
+#  Every deploy should land on the production URL and nowhere else: no
+#  per-pull-request preview sub-domains, no per-branch sub-domains.
+#
+#  Netlify runs the `ignore` command before building. When it exits 0 the
+#  build is cancelled, so the contexts below never produce a deploy of
+#  their own — only the production branch does.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Pull requests: no preview deploy, no deploy-preview-N--smoquit URL.
+[context.deploy-preview]
+  ignore = "exit 0"
+
+# Other branches: no branch-name sub-domain either.
+[context.branch-deploy]
+  ignore = "exit 0"
