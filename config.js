@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-//  SMOQUIT CONFIG  —  EDIT THESE TWO LINES, THEN UPLOAD THE FOLDER.
+//  Smoquit CONFIG  —  EDIT THESE TWO LINES, THEN UPLOAD THE FOLDER.
 //
 //  Get both values from your Supabase project:
 //    Supabase dashboard → Settings → API
