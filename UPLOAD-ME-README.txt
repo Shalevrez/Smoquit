@@ -29,8 +29,8 @@ Two things still need doing:
      is ever created. Work reaches the live site by being merged, not by
      getting a side link of its own.
    - Deploying by hand instead? Upload the CONTENTS of this folder
-     (index.html, assets/, config.js, storage-health.js, _redirects — all of
-     it), not the folder.
+     (index.html, assets/, config.js, storage-health.js, version.js,
+     _redirects — all of it), not the folder.
    - _redirects is what keeps deep links working on a single-page app.
      Netlify reads it natively; so does Cloudflare Pages if you ever move.
 
@@ -75,6 +75,26 @@ Turning it on is done in the dashboards, not in this code:
 
 Reload the app — "Continue with Google" appears on its own, no rebuild needed.
 The same steps work for Apple under Authentication → Providers → Apple.
+
+
+BUMP THE VERSION NUMBER BEFORE EVERY UPLOAD
+-------------------------------------------
+version.js holds two lines — the version and the build date — and shows them
+in the bottom-left corner of every screen:
+
+    var VERSION = "1.0.0";
+    var BUILT   = "2026-08-31";
+
+Raise the version and set the date before you deploy. Third number for a fix,
+second for a new feature, first for a rewrite. No rebuild needed; it is a
+plain runtime file like config.js.
+
+This is how you tell whether a deploy actually landed. Open the live site and
+read the corner: if it still says the old number, you are looking at the old
+build — Netlify has not finished, or your browser is holding a cached copy
+(Ctrl+Shift+R / Cmd+Shift+R clears that). Without it, "I uploaded it but
+nothing changed" is a guess. You can also type SMOQUIT_VERSION in the browser
+console to read it back.
 
 
 IF YOUR DATA ISN'T SAVING
