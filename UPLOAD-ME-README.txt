@@ -22,21 +22,29 @@ Two things still need doing:
      setup did not take. Run supabase-schema.sql again and read the output.
 
 2. DEPLOY
-   - This repo is connected to Netlify (project "smoquit"). Merging into the
-     production branch deploys the site — no manual upload needed.
-   - There is ONE address. netlify.toml cancels pull-request previews and
-     per-branch deploys, so no deploy-preview-N-- or branch-name sub-domain
-     is ever created. Work reaches the live site by being merged, not by
-     getting a side link of its own.
+   - This repo is connected to Cloudflare Pages. Merging into the production
+     branch deploys the site — no manual upload needed.
+   - Keeping ONE address: unlike Netlify, Cloudflare has no repo file for
+     this. It is a dashboard setting — Workers & Pages → your project →
+     Settings → Builds → Preview deployments → set to None. Do that once and
+     no branch or pull request gets a side URL of its own; work reaches the
+     live site by being merged.
    - Deploying by hand instead? Upload the CONTENTS of this folder
      (index.html, assets/, config.js, storage-health.js, version.js,
-     _redirects — all of it), not the folder.
-   - _redirects is what keeps deep links working on a single-page app.
-     Netlify reads it natively; so does Cloudflare Pages if you ever move.
+     _redirects, _headers — all of it), not the folder.
+   - _redirects keeps deep links working on a single-page app, and _headers
+     stops the browser caching the runtime files. Cloudflare Pages reads both
+     natively, and so does Netlify — the syntax is identical — so moving
+     again costs nothing.
 
-AFTER IT'S LIVE:
-   - In Supabase → Authentication → URL Configuration, set the Site URL
-     to your live Netlify URL, so Google/Apple login redirects work.
+AFTER IT'S LIVE — AND AFTER ANY MOVE TO A NEW ADDRESS:
+   - In Supabase → Authentication → URL Configuration, set the Site URL to
+     your live Cloudflare Pages URL (https://<project>.pages.dev, or your own
+     domain if you have attached one), and put that same URL in Redirect URLs.
+   - This is not optional after changing hosts. The app sends people back to
+     window.location.origin after a social login, and Supabase refuses any
+     origin that is not on that list — so "Continue with Google" will bounce
+     you to the OLD address, or fail outright, until you update it.
    - Email/password sign-in works with no extra setup.
 
 
@@ -65,13 +73,14 @@ Turning it on is done in the dashboards, not in this code:
       → paste the Client ID and Client Secret → Save.
 
  c) Supabase → Authentication → URL Configuration
-      → Site URL:      your live Netlify URL
-                       (default: https://smoquit.netlify.app — use your own
-                        domain instead if you've attached one)
+      → Site URL:      your live Cloudflare Pages URL
+                       (https://<project>.pages.dev — use your own domain
+                        instead if you've attached one)
       → Redirect URLs: add that same one URL, and nothing else.
     Without this, Google sends people back to the wrong address after login.
-    Since there are no preview sub-domains, no wildcard entry is needed —
-    one address to allow, which is also one less thing to get wrong.
+    With preview deployments turned off there are no side sub-domains, so no
+    wildcard entry is needed — one address to allow, which is also one less
+    thing to get wrong.
 
 Reload the app — "Continue with Google" appears on its own, no rebuild needed.
 The same steps work for Apple under Authentication → Providers → Apple.
@@ -91,9 +100,9 @@ plain runtime file like config.js.
 
 This is how you tell whether a deploy actually landed. Open the live site and
 read the corner: if it still says the old number, you are looking at the old
-build — Netlify has not finished, or your browser is holding a cached copy
-(Ctrl+Shift+R / Cmd+Shift+R clears that). Without it, "I uploaded it but
-nothing changed" is a guess. You can also type SMOQUIT_VERSION in the browser
+build — Cloudflare has not finished the deploy yet, or your browser is
+holding a cached copy (Ctrl+Shift+R / Cmd+Shift+R clears that). Without it,
+"I uploaded it but nothing changed" is a guess. You can also type SMOQUIT_VERSION in the browser
 console to read it back.
 
 

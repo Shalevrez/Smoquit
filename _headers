@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────────────────────────────────
+#  Smoquit — cache rules (Cloudflare Pages reads this file natively;
+#  so does Netlify, with the same syntax, if we ever move back).
+#
+#  Two different kinds of file live here, and they need opposite treatment:
+#
+#   • assets/  — the built bundle. Its filename contains a hash of its own
+#     contents, so a changed file always arrives under a NEW name. It can
+#     safely be cached forever; there is no such thing as a stale one.
+#
+#   • the runtime files at the root — config.js, version.js,
+#     storage-health.js, index.html. These keep the same name forever and
+#     are edited in place. Caching them is what makes a deploy look like it
+#     "did nothing": you upload a new version and the browser keeps showing
+#     the old one. Worst of all for version.js, whose entire job is telling
+#     you the truth about which build you are looking at.
+#
+#  "no-cache" does not mean "never store it" — it means "always check with
+#  the server first". A revalidation of a 1 KB file costs nothing.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Content-hashed build output — safe to keep forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Edited in place, so always revalidate.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/config.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/version.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/storage-health.js
+  Cache-Control: public, max-age=0, must-revalidate
