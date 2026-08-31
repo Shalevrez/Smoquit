@@ -11,9 +11,12 @@ Two things still need doing:
    - It is safe to run twice; if you already did this, skip it.
 
 2. DEPLOY
-   - This repo is connected to Netlify (project "smoquit"), so pushing to a
-     branch deploys it — no manual upload needed. Pull requests get their own
-     preview at https://deploy-preview-<PR-number>--smoquit.netlify.app
+   - This repo is connected to Netlify (project "smoquit"). Merging into the
+     production branch deploys the site — no manual upload needed.
+   - There is ONE address. netlify.toml cancels pull-request previews and
+     per-branch deploys, so no deploy-preview-N-- or branch-name sub-domain
+     is ever created. Work reaches the live site by being merged, not by
+     getting a side link of its own.
    - Deploying by hand instead? Upload the CONTENTS of this folder
      (index.html, assets/, config.js, _redirects — all of it), not the folder.
    - _redirects is what keeps deep links working on a single-page app.
@@ -53,10 +56,10 @@ Turning it on is done in the dashboards, not in this code:
       → Site URL:      your live Netlify URL
                        (default: https://smoquit.netlify.app — use your own
                         domain instead if you've attached one)
-      → Redirect URLs: add that same URL. To let sign-in work on pull-request
-                       previews too, also add the wildcard
-                       https://*--smoquit.netlify.app
+      → Redirect URLs: add that same one URL, and nothing else.
     Without this, Google sends people back to the wrong address after login.
+    Since there are no preview sub-domains, no wildcard entry is needed —
+    one address to allow, which is also one less thing to get wrong.
 
 Reload the app — "Continue with Google" appears on its own, no rebuild needed.
 The same steps work for Apple under Authentication → Providers → Apple.
