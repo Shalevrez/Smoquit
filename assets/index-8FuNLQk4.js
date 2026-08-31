@@ -70,10 +70,82 @@ ${g}`}class Z extends Error{constructor({message:e,code:r,cause:n,name:s}){var i
   Wa = xf.SUPABASE_ANON_KEY || void 0,
   Ni = !Ha || !Wa || Ha.includes("YOUR-PROJECT") || Wa.includes("YOUR-ANON");
 Ni && console.warn("Supabase not configured. Edit config.js with your Project URL and anon key.");
+// ────────────────────────────────────────────────────────────────────────────
+//  Where Supabase's emails come back to
+//
+//  Every link Supabase mails out — confirm your account, reset your password
+//  — opens a URL that Supabase decides, not this code. Say nothing and it
+//  uses the project's Site URL, which starts life as http://localhost:3000:
+//  the mail arrives, the link opens nothing, and the account is left half
+//  created. Sending the live origin with every request is what stops that.
+//
+//  Supabase only honours an origin that is listed under Authentication →
+//  URL Configuration → Redirect URLs; anything else is quietly ignored and
+//  Site URL is used instead. So this is half the fix — the other half is a
+//  dashboard setting, written down in UPLOAD-ME-README.txt.
+// ────────────────────────────────────────────────────────────────────────────
+function sqAuthRedirectTo() {
+  try {
+    return window.location.origin;
+  } catch (t) {
+    return void 0;
+  }
+}
+// The address as it was when the page opened. supabase-js reads the token out
+// of the URL and wipes it on boot (detectSessionInUrl), so anything else we
+// need from an email link — which kind of link it was, or why it failed —
+// has to be copied down before that happens.
+const SQ_BOOT_HASH = (function () {
+    try {
+      var t = String(window.location.hash || "");
+      return t.charAt(0) === "#" ? t.slice(1) : t;
+    } catch (e) {
+      return "";
+    }
+  })(),
+  SQ_BOOT_QUERY = (function () {
+    try {
+      return String(window.location.search || "").replace(/^\?/, "");
+    } catch (t) {
+      return "";
+    }
+  })();
+function sqBootParam(t) {
+  try {
+    return (
+      new URLSearchParams(SQ_BOOT_HASH).get(t) || new URLSearchParams(SQ_BOOT_QUERY).get(t) || ""
+    );
+  } catch (e) {
+    return "";
+  }
+}
+// A link that sat in an inbox too long comes back as ?error=...&error_code=
+// otp_expired. Without noticing it the page just shows a blank sign-in form,
+// which reads as "nothing happened" rather than "that link is stale".
+const SQ_BOOT_LINK_ERROR =
+  sqBootParam("error_description") || sqBootParam("error_code") || sqBootParam("error");
 const at = k0(Ni ? "http://localhost" : Ha, Ni ? "public-anon-key" : Wa, {
     auth: { persistSession: !0, autoRefreshToken: !0, detectSessionInUrl: !0 },
   }),
   b0 = !Ni;
+// A password-reset link signs its visitor in and then wants a new password.
+// It is the one moment where being signed in should NOT drop you into the
+// app, so it gets a flag of its own rather than riding on the session.
+let SQ_RECOVERY = sqBootParam("type") === "recovery";
+const sqRecoveryListeners = new Set();
+function sqSetRecovery(t) {
+  SQ_RECOVERY !== t && ((SQ_RECOVERY = t), sqRecoveryListeners.forEach((e) => e()));
+}
+function useSqRecovery() {
+  const [, t] = U.useState(0);
+  return (
+    U.useEffect(() => {
+      const e = () => t((r) => r + 1);
+      return (sqRecoveryListeners.add(e), () => sqRecoveryListeners.delete(e));
+    }, []),
+    SQ_RECOVERY
+  );
+}
 function E0() {
   const [t, e] = U.useState(null),
     [r, n] = U.useState(!1);
@@ -83,7 +155,7 @@ function E0() {
         (e(i.session), n(!0));
       });
       const { data: s } = at.auth.onAuthStateChange((i, o) => {
-        e(o);
+        (i === "PASSWORD_RECOVERY" && sqSetRecovery(!0), e(o));
       });
       return () => s.subscription.unsubscribe();
     }, []),
@@ -94,10 +166,20 @@ async function T0(t, e) {
   return at.auth.signInWithPassword({ email: t, password: e });
 }
 async function x0(t, e) {
-  return at.auth.signUp({ email: t, password: e });
+  return at.auth.signUp({
+    email: t,
+    password: e,
+    options: { emailRedirectTo: sqAuthRedirectTo() },
+  });
+}
+async function sqSendPasswordReset(t) {
+  return at.auth.resetPasswordForEmail(t, { redirectTo: sqAuthRedirectTo() });
+}
+async function sqSetNewPassword(t) {
+  return at.auth.updateUser({ password: t });
 }
 async function C0(t) {
-  return at.auth.signInWithOAuth({ provider: t, options: { redirectTo: window.location.origin } });
+  return at.auth.signInWithOAuth({ provider: t, options: { redirectTo: sqAuthRedirectTo() } });
 }
 async function R0() {
   return at.auth.signOut();
@@ -152,6 +234,20 @@ const SQ_LANG_STORAGE_KEY = "smoquit.lang",
   "Already have an account? Sign in": "כבר יש לכם חשבון? כניסה",
   "New here? Create an account": "חדשים כאן? יצירת חשבון",
   "Check your email to confirm your account, then sign in.": "שלחנו לכם מייל לאישור החשבון — אשרו אותו ואז היכנסו.",
+  "Forgot your password?": "שכחתם את הסיסמה?",
+  "Back to sign in": "חזרה למסך הכניסה",
+  "Send reset link": "שליחת קישור לאיפוס",
+  "Enter your email and we'll send you a link to set a new password.": "הזינו את כתובת הדוא״ל ונשלח לכם קישור לקביעת סיסמה חדשה.",
+  "If that address has an account, a reset link is on its way. It works once, and expires in an hour.": "אם קיים חשבון עם הכתובת הזו, קישור לאיפוס בדרך. הקישור פועל פעם אחת, ופג תוקף בתוך שעה.",
+  "This account hasn't been confirmed yet. Open the confirmation link in the email we sent you.": "החשבון עדיין לא אושר. פתחו את קישור האישור במייל ששלחנו לכם.",
+  "That link didn't work — it may have expired or already been used. Ask for a new one.": "הקישור לא עבד — ייתכן שפג תוקפו או שכבר נעשה בו שימוש. בקשו קישור חדש.",
+  "Choose a new password.": "בחרו סיסמה חדשה.",
+  "New password": "סיסמה חדשה",
+  "Repeat new password": "אימות הסיסמה החדשה",
+  "Save new password": "שמירת הסיסמה החדשה",
+  "Pick a password of at least 6 characters.": "בחרו סיסמה באורך 6 תווים לפחות.",
+  "The two passwords don't match.": "שתי הסיסמאות אינן זהות.",
+  "Password changed. Opening the app…": "הסיסמה שונתה. פותחים את האפליקציה…",
   "Something went wrong.": "משהו השתבש.",
   "That sign-in option isn't switched on for this app yet. Use your email and password below.": "אפשרות ההתחברות הזו עדיין לא מופעלת באפליקציה. השתמשו בדוא״ל ובסיסמה שלמטה.",
   "Your data is stored privately in your own account and is visible only to you. We don't sell it, share it, or analyze it.": "הנתונים שלכם נשמרים באופן פרטי בחשבון שלכם וגלויים רק לכם. איננו מוכרים, משתפים או מנתחים אותם.",
@@ -366,6 +462,14 @@ function friendlyAuthError(msg) {
     return sqT(
       "That sign-in option isn't switched on for this app yet. Use your email and password below.",
     );
+  if (/email not confirmed/i.test(m))
+    return sqT(
+      "This account hasn't been confirmed yet. Open the confirmation link in the email we sent you.",
+    );
+  if (/expired|invalid.*(token|link)|token.*(expired|invalid)/i.test(m))
+    return sqT(
+      "That link didn't work — it may have expired or already been used. Ask for a new one.",
+    );
   return m || sqT("Something went wrong.");
 }
 function P0() {
@@ -374,21 +478,38 @@ function P0() {
     [t, e] = U.useState("signin"),
     [r, n] = U.useState(""),
     [s, i] = U.useState(""),
-    [o, a] = U.useState(null),
+    [o, a] = U.useState(() =>
+      SQ_BOOT_LINK_ERROR ? { ok: !1, text: friendlyAuthError(SQ_BOOT_LINK_ERROR) } : null,
+    ),
     [l, u] = U.useState(!1),
     d = async () => {
       (a(null), u(!0));
       try {
-        if (t === "signup") {
-          const { error: h } = await x0(r, s);
+        if (t === "forgot") {
+          const { error: h } = await sqSendPasswordReset(r);
           if (h) throw h;
-          a({ ok: !0, text: sqT("Check your email to confirm your account, then sign in.") });
+          a({
+            ok: !0,
+            text: sqT(
+              "If that address has an account, a reset link is on its way. It works once, and expires in an hour.",
+            ),
+          });
+        } else if (t === "signup") {
+          const { data: p, error: h } = await x0(r, s);
+          if (h) throw h;
+          // With "Confirm email" switched off in Supabase, signing up hands
+          // back a session there and then — the app is about to open, so a
+          // "check your email" note would be a lie. Only say it when there
+          // is genuinely an email to wait for.
+          p != null && p.session
+            ? a(null)
+            : a({ ok: !0, text: sqT("Check your email to confirm your account, then sign in.") });
         } else {
           const { error: h } = await T0(r, s);
           if (h) throw h;
         }
       } catch (h) {
-        a({ ok: !1, text: h.message || sqT("Something went wrong.") });
+        a({ ok: !1, text: friendlyAuthError(h.message) });
       } finally {
         u(!1);
       }
@@ -407,8 +528,9 @@ function P0() {
       alive = !1;
     };
   }, []);
-  const showGoogleBtn = !!(oauthProviders && oauthProviders.google),
-    showAppleBtn = !!(oauthProviders && oauthProviders.apple),
+  const forgotMode = t === "forgot",
+    showGoogleBtn = !!(oauthProviders && oauthProviders.google) && !forgotMode,
+    showAppleBtn = !!(oauthProviders && oauthProviders.apple) && !forgotMode,
     showOauthRow = showGoogleBtn || showAppleBtn;
   return w.jsx("div", {
     style: A0,
@@ -430,7 +552,11 @@ function P0() {
         }),
         w.jsx("p", {
           style: I0,
-          children: sqT("Track what you smoke. Notice the pattern. Loosen its grip."),
+          children: sqT(
+            t === "forgot"
+              ? "Enter your email and we'll send you a link to set a new password."
+              : "Track what you smoke. Notice the pattern. Loosen its grip.",
+          ),
         }),
         showOauthRow
           ? w.jsxs("div", {
@@ -464,19 +590,25 @@ function P0() {
           onChange: (h) => n(h.target.value),
           autoComplete: "email",
         }),
-        w.jsx("input", {
-          style: Dc,
-          type: "password",
-          placeholder: sqT("Password"),
-          value: s,
-          onChange: (h) => i(h.target.value),
-          autoComplete: t === "signup" ? "new-password" : "current-password",
-        }),
+        forgotMode
+          ? null
+          : w.jsx("input", {
+              style: Dc,
+              type: "password",
+              placeholder: sqT("Password"),
+              value: s,
+              onChange: (h) => i(h.target.value),
+              autoComplete: t === "signup" ? "new-password" : "current-password",
+            }),
         w.jsx("button", {
           style: L0,
           onClick: d,
-          disabled: l || !r || !s,
-          children: l ? "…" : sqT(t === "signup" ? "Create account" : "Sign in"),
+          disabled: l || !r || (!forgotMode && !s),
+          children: l
+            ? "…"
+            : sqT(
+                forgotMode ? "Send reset link" : t === "signup" ? "Create account" : "Sign in",
+              ),
         }),
         o &&
           w.jsx("div", {
@@ -488,13 +620,26 @@ function P0() {
             },
             children: o.text,
           }),
+        t === "signin"
+          ? w.jsx("button", {
+              style: { ...D0, marginTop: 10 },
+              onClick: () => {
+                (e("forgot"), a(null));
+              },
+              children: sqT("Forgot your password?"),
+            })
+          : null,
         w.jsx("button", {
           style: D0,
           onClick: () => {
-            (e(t === "signup" ? "signin" : "signup"), a(null));
+            (e(t === "signin" ? "signup" : "signin"), a(null));
           },
           children: sqT(
-            t === "signup" ? "Already have an account? Sign in" : "New here? Create an account",
+            forgotMode
+              ? "Back to sign in"
+              : t === "signup"
+                ? "Already have an account? Sign in"
+                : "New here? Create an account",
           ),
         }),
         w.jsx("p", {
@@ -619,6 +764,103 @@ const A0 = {
     textDecoration: "underline",
   },
   U0 = { fontSize: 11.5, color: te.ash, lineHeight: 1.5, marginTop: 18, textAlign: "center" };
+// ────────────────────────────────────────────────────────────────────────────
+//  Where a reset link lands
+//
+//  Following the link has already signed this person in — Supabase hands out
+//  a short-lived session so that updateUser() has something to authenticate
+//  with. Dropping them straight into the app would leave the forgotten
+//  password in place, so this screen stands in front of it until a new one
+//  is set.
+// ────────────────────────────────────────────────────────────────────────────
+function sqNewPasswordScreen() {
+  useSqLang();
+  const [t, e] = U.useState(""),
+    [r, n] = U.useState(""),
+    [s, i] = U.useState(null),
+    [o, a] = U.useState(!1),
+    l = async () => {
+      if (t.length < 6) {
+        i({ ok: !1, text: sqT("Pick a password of at least 6 characters.") });
+        return;
+      }
+      if (t !== r) {
+        i({ ok: !1, text: sqT("The two passwords don't match.") });
+        return;
+      }
+      (i(null), a(!0));
+      try {
+        const { error: u } = await sqSetNewPassword(t);
+        if (u) throw u;
+        (i({ ok: !0, text: sqT("Password changed. Opening the app…") }),
+          setTimeout(() => sqSetRecovery(!1), 900));
+      } catch (u) {
+        (i({ ok: !1, text: friendlyAuthError(u.message) }), a(!1));
+      }
+    };
+  return w.jsx("div", {
+    style: A0,
+    children: w.jsxs("div", {
+      style: O0,
+      children: [
+        w.jsx("div", {
+          style: {
+            display: "flex",
+            alignItems: "baseline",
+            gap: 8,
+            justifyContent: "center",
+            marginBottom: 6,
+          },
+          children: w.jsxs("span", {
+            style: j0,
+            children: ["Smo", w.jsx("span", { style: { color: te.ember }, children: "quit" })],
+          }),
+        }),
+        w.jsx("p", { style: I0, children: sqT("Choose a new password.") }),
+        w.jsx("div", { style: { height: 18 } }),
+        w.jsx("input", {
+          style: Dc,
+          type: "password",
+          placeholder: sqT("New password"),
+          value: t,
+          onChange: (u) => e(u.target.value),
+          autoComplete: "new-password",
+        }),
+        w.jsx("input", {
+          style: Dc,
+          type: "password",
+          placeholder: sqT("Repeat new password"),
+          value: r,
+          onChange: (u) => n(u.target.value),
+          autoComplete: "new-password",
+        }),
+        w.jsx("button", {
+          style: L0,
+          onClick: l,
+          disabled: o || !t || !r,
+          children: o ? "…" : sqT("Save new password"),
+        }),
+        s &&
+          w.jsx("div", {
+            style: {
+              fontSize: 13,
+              marginTop: 12,
+              color: s.ok ? te.moss : te.ember,
+              lineHeight: 1.5,
+            },
+            children: s.text,
+          }),
+        w.jsx("button", {
+          style: D0,
+          onClick: async () => {
+            (await R0(), sqSetRecovery(!1));
+          },
+          children: sqT("Back to sign in"),
+        }),
+      ],
+    }),
+  });
+}
 async function Ml() {
   var e;
   const { data: t } = await at.auth.getUser();
@@ -2284,12 +2526,15 @@ const Uc = {
   Bc = { fontSize: 12.5, color: S.ash, lineHeight: 1.5, marginTop: 8 };
 function Sw() {
   useSqLang();
-  const { user: t, ready: e } = E0();
+  const r = useSqRecovery(),
+    { user: t, ready: e } = E0();
   return b0
     ? e
-      ? t
-        ? w.jsx(W0, { user: t }, t.id)
-        : w.jsx(P0, {})
+      ? r
+        ? w.jsx(sqNewPasswordScreen, {})
+        : t
+          ? w.jsx(W0, { user: t }, t.id)
+          : w.jsx(P0, {})
       : w.jsx("div", {
           style: Mc,
           children: w.jsx("span", {
