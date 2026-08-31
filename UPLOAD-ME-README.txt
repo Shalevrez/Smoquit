@@ -113,8 +113,23 @@ gone. That is almost always step 1 above: the user_data table is missing, so
 every write is rejected by the database.
 
 The app now says so out loud. When a read or write fails, a red banner appears
-across the top of the screen naming the cause and the fix — that is
-storage-health.js, and it is why that file has to be uploaded along with the
+across the top of the screen naming the cause and the fix, with the database's
+own error code printed underneath it in small type. Read that code — the
+sentence is a best guess, the code is the fact:
+
+  PGRST205  The table does not exist. supabase-schema.sql never ran, or it
+            rolled back. Run it.
+  42501     "permission denied for table user_data". The table exists, but
+            this app is not allowed to touch it — a missing GRANT. Note that
+            row-level security never causes this on a read: a policy that
+            excludes a row returns nothing at all, silently. An ERROR on a
+            read means the grant, not the policy. Re-run the current
+            supabase-schema.sql, which grants explicitly.
+  PGRST301  The login token was rejected. Sign out and back in; if that does
+            not fix it, Supabase's Site URL does not match the address you
+            are actually on.
+
+That banner is storage-health.js, which is why it has to be uploaded with the
 rest. Previously these failures went only to the browser console, so the app
 looked like it was working right up until you reloaded it.
 
