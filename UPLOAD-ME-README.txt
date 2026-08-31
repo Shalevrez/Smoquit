@@ -31,7 +31,9 @@ Two things still need doing:
      live site by being merged.
    - Deploying by hand instead? Upload the CONTENTS of this folder
      (index.html, assets/, config.js, storage-health.js, version.js,
-     _redirects, _headers — all of it), not the folder.
+     _redirects, _headers — all of it), not the folder. Not app/ — that is
+     the source the bundle in assets/ is built from, and the site does not
+     read it.
    - _redirects keeps deep links working on a single-page app, and _headers
      stops the browser caching the runtime files. Cloudflare Pages reads both
      natively, and so does Netlify — the syntax is identical — so moving
@@ -182,11 +184,131 @@ error banner.
 There is a language switch at the bottom of the sign-in screen too — that
 one is remembered in the browser only, since nobody is signed in yet.
 
-The translations live in the built bundle under assets/, not in a runtime
-file, so changing wording means a rebuild — unlike config.js or version.js.
+The translations live in app/src/i18n/he.js and end up inside the bundle, so
+changing wording means a rebuild — unlike config.js or version.js. Note that
+the ENGLISH STRING IS THE KEY: edit an English sentence and you must re-key
+its Hebrew to match, or the sentence goes untranslated. The build checks
+this for you and refuses to finish otherwise.
+
 Anything stored in the database (trigger names, product names, country
 codes) deliberately stays English, so switching language never rewrites
 your history.
+
+
+WHERE THE CODE LIVES, AND HOW TO CHANGE IT
+------------------------------------------
+The site is this folder. Cloudflare Pages serves it directly, with NO build
+command set in the dashboard — leave it that way. index.html and assets/ are
+generated, and they are committed on purpose, because that is what gets
+served.
+
+The source they are generated from is in app/:
+
+    cd app
+    npm install
+    npm run build      # rewrites ../index.html and ../assets/
+    npm test           # drives the app in a browser and checks it works
+    npm run lint
+
+`npm run build` is the only thing that should ever write to index.html or
+assets/. It refuses to finish if the result is not deployable — see below.
+EDIT app/src, RUN THE BUILD, AND COMMIT BOTH. Committing a change to app/src
+without the rebuilt output leaves the live site on the old code, silently;
+the version number in the corner is how you notice.
+
+What the build will not touch: config.js, version.js, storage-health.js,
+_headers, _redirects. Those stay plain files you edit and upload directly,
+with no rebuild — that is the whole point of them, and the build checks
+afterwards that they are still there and unchanged.
+
+Three guards run as part of every build, and any of them failing stops it:
+
+  scripts/check-output.mjs   The generated index.html still loads config.js,
+                             storage-health.js and version.js, in that order,
+                             in the body, BEFORE the module bundle. That
+                             ordering is the only reason the app can read
+                             your Supabase keys — the bundle is a module, so
+                             it is deferred and runs last. Also checks the
+                             language script that runs before the first
+                             paint, and that the files above are untouched.
+
+  scripts/check-i18n.mjs     Every English string the app shows has a Hebrew
+                             translation, and nothing in the dictionary has
+                             gone orphaned. Because the English string IS the
+                             translation key, editing English wording is also
+                             a key change; this is what stops that from
+                             quietly untranslating a sentence.
+
+  eslint                     Mostly for one rule: a reference to a name that
+                             does not exist. The bundler will happily ship
+                             that and throw when somebody opens the screen.
+
+TESTS
+-----
+`npm test` runs the app in a real browser against a stand-in for Supabase —
+no test account, no network, and no chance of writing to anybody's real
+history. It covers logging a cigarette, tagging it, correcting its time,
+undo, the goal and settings forms, switching to Hebrew, and every tab
+loading without throwing. It also walks the email-link paths that are
+otherwise only reachable through an inbox: asking for a reset link, arriving
+on one, and arriving on one that has expired.
+
+tests/unit/ runs the date and migration logic directly, under several
+timezones — that code was wrong in a way that was invisible in UTC and wrong
+everywhere else, which is exactly the shape of bug a single-timezone suite
+ships:
+
+    for tz in UTC Asia/Jerusalem America/Los_Angeles Asia/Kolkata; do
+      TZ=$tz npx playwright test tests/unit
+    done
+
+
+RIDING OUT A CRAVING
+--------------------
+"I want one right now" on the Today tab opens a five-minute timer, a
+breathing pattern, the reason you wrote for yourself on the Goal tab, and —
+once you say what set it off — something to do instead. Both ways out are
+always there, and giving in is not a dead end: "I smoked one anyway" records
+the craving and then hands over to the normal logging flow with the trigger
+already chosen, so you are never asked the same question twice.
+
+Both outcomes are stored, not just the wins. A count of wins alone would be
+flattering and useless; what makes a number worth reading is that the total
+it came out of is real.
+
+This lives in a fourth row in the database, under the key `cravings`. No
+schema change was needed — user_data is a key/value table, so a new key is
+just a new row, and supabase-schema.sql is unchanged.
+
+If nothing is chosen and the sheet is simply closed, nothing is recorded.
+We do not know what happened, and guessing would put invented wins into a
+number whose whole value is that it is true.
+
+WORKING WITHOUT A SIGNAL
+------------------------
+The app keeps a copy of your data in the browser, so it opens instantly and
+keeps working when the connection does not. A cigarette logged in a
+stairwell is logged; it reaches your account when there is a connection to
+reach it with, and until then it sits in a queue that is retried when the
+browser comes back online and again on the next start.
+
+Two consequences worth knowing:
+
+  • The red storage banner no longer appears for an ordinary dropped
+    connection — only for a failure you can actually do something about (a
+    missing table, a missing grant, a rejected token). That is deliberate.
+    A banner that cries wolf every time somebody walks into a lift is a
+    banner nobody reads when the database really is misconfigured.
+
+  • Undo marks an entry deleted rather than erasing it, and the mark is
+    cleared out after a month. This matters only if you use two devices:
+    when they sync, entries are combined rather than one side overwriting
+    the other, and without the mark a deletion made on one device would be
+    undone by the other simply not knowing about it yet.
+
+The local copy is per account and is cleared when you sign out or use
+"Delete all my data", so a shared phone never shows one person's history to
+the next.
 
 
 BUMP THE VERSION NUMBER BEFORE EVERY UPLOAD
