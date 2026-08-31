@@ -13,10 +13,18 @@
 //
 //  Plain JavaScript loaded at runtime, like config.js, so it can be edited
 //  without rebuilding the app.
+//
+//  The banner speaks whichever language the app is in: the bundle publishes
+//  it as window.SMOQUIT_LANG, and it is read at the moment a failure
+//  happens, so switching language mid-session is picked up too.
 // ─────────────────────────────────────────────────────────────────────────
 (function () {
   var BANNER_ID = "smoquit-storage-banner";
   var dismissed = false;
+
+  function lang() {
+    return window.SMOQUIT_LANG === "he" ? "he" : "en";
+  }
 
   // Supabase / PostgREST report a missing table in a few different shapes
   // depending on which layer noticed it. Any of these means the same thing:
@@ -75,31 +83,54 @@
     return bits.join(" · ");
   }
 
-  function messageFor(kind, err) {
-    var verb = kind === "load" ? "load your saved data" : "save your data";
+  var MESSAGES = {
+    en: {
+      load: "load your saved data",
+      save: "save your data",
+      tableMissing:
+        "Smoquit could not {verb}: the database table is missing. " +
+        "Open your Supabase project → SQL Editor, paste supabase-schema.sql and run it, then reload this page.",
+      auth:
+        "Smoquit could not {verb}: your sign-in was not accepted. " +
+        "Sign out and sign back in. If that does not help, check that Supabase's Site URL matches the address you are on.",
+      denied:
+        "Smoquit could not {verb}: the database refused the request. " +
+        "Re-run the CURRENT supabase-schema.sql from the repo — it grants this app access to the table — then reload this page.",
+      unknown:
+        "Smoquit could not {verb}. Nothing you enter is being stored right now. " +
+        "Check your connection and reload; if it keeps happening, re-run supabase-schema.sql in Supabase.",
+      dismiss: "Dismiss"
+    },
+    he: {
+      load: "לטעון את הנתונים השמורים שלכם",
+      save: "לשמור את הנתונים שלכם",
+      tableMissing:
+        "‏Smoquit לא הצליח {verb}: טבלת מסד הנתונים חסרה. " +
+        "פתחו את הפרויקט ב־Supabase ← SQL Editor, הדביקו את supabase-schema.sql והריצו אותו, ואז רעננו את הדף.",
+      auth:
+        "‏Smoquit לא הצליח {verb}: ההתחברות שלכם לא התקבלה. " +
+        "התנתקו והתחברו מחדש. אם זה לא עוזר, בדקו שכתובת ה־Site URL ב־Supabase תואמת לכתובת שאתם נמצאים בה.",
+      denied:
+        "‏Smoquit לא הצליח {verb}: מסד הנתונים דחה את הבקשה. " +
+        "הריצו מחדש את הגרסה העדכנית של supabase-schema.sql מהמאגר — היא מעניקה לאפליקציה גישה לטבלה — ואז רעננו את הדף.",
+      unknown:
+        "‏Smoquit לא הצליח {verb}. שום דבר שתזינו לא נשמר כרגע. " +
+        "בדקו את החיבור ורעננו; אם זה חוזר, הריצו מחדש את supabase-schema.sql ב־Supabase.",
+      dismiss: "סגירה"
+    }
+  };
 
-    if (isTableMissing(err)) {
-      return (
-        "Smoquit could not " + verb + ": the database table is missing. " +
-        "Open your Supabase project → SQL Editor, paste supabase-schema.sql and run it, then reload this page."
-      );
-    }
-    if (isAuthProblem(err)) {
-      return (
-        "Smoquit could not " + verb + ": your sign-in was not accepted. " +
-        "Sign out and sign back in. If that does not help, check that Supabase's Site URL matches the address you are on."
-      );
-    }
-    if (isPermissionDenied(err)) {
-      return (
-        "Smoquit could not " + verb + ": the database refused the request. " +
-        "Re-run the CURRENT supabase-schema.sql from the repo — it grants this app access to the table — then reload this page."
-      );
-    }
-    return (
-      "Smoquit could not " + verb + ". Nothing you enter is being stored right now. " +
-      "Check your connection and reload; if it keeps happening, re-run supabase-schema.sql in Supabase."
-    );
+  function messageFor(kind, err) {
+    var words = MESSAGES[lang()];
+    var verb = kind === "load" ? words.load : words.save;
+    var key = isTableMissing(err)
+      ? "tableMissing"
+      : isAuthProblem(err)
+        ? "auth"
+        : isPermissionDenied(err)
+          ? "denied"
+          : "unknown";
+    return words[key].replace("{verb}", verb);
   }
 
   function render(text, detail) {
@@ -115,11 +146,14 @@
     var bar = document.createElement("div");
     bar.id = BANNER_ID;
     bar.setAttribute("role", "alert");
+    bar.lang = lang();
+    bar.dir = lang() === "he" ? "rtl" : "ltr";
     bar.style.cssText = [
       "position:fixed", "top:0", "left:0", "right:0", "z-index:2147483647",
       "background:#E4572E", "color:#fff",
       "font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-      "padding:12px 44px 12px 16px", "box-shadow:0 1px 6px rgba(0,0,0,.2)"
+      lang() === "he" ? "padding:12px 16px 12px 44px" : "padding:12px 44px 12px 16px",
+      "box-shadow:0 1px 6px rgba(0,0,0,.2)"
     ].join(";");
     var line = document.createElement("div");
     line.textContent = text;
@@ -130,6 +164,9 @@
     if (detail) {
       var raw = document.createElement("div");
       raw.textContent = detail;
+      // Postgres codes and English error text — always left-to-right, even
+      // when the sentence above it is Hebrew.
+      raw.dir = "ltr";
       raw.style.cssText = [
         "margin-top:5px",
         "font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace",
@@ -143,10 +180,10 @@
 
     var close = document.createElement("button");
     close.type = "button";
-    close.setAttribute("aria-label", "Dismiss");
+    close.setAttribute("aria-label", MESSAGES[lang()].dismiss);
     close.textContent = "×";
     close.style.cssText = [
-      "position:absolute", "top:6px", "right:10px",
+      "position:absolute", "top:6px", lang() === "he" ? "left:10px" : "right:10px",
       "background:none", "border:none", "color:#fff",
       "font-size:22px", "line-height:1", "cursor:pointer", "padding:4px"
     ].join(";");

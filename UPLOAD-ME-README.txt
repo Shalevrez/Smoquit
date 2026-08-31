@@ -86,6 +86,31 @@ Reload the app — "Continue with Google" appears on its own, no rebuild needed.
 The same steps work for Apple under Authentication → Providers → Apple.
 
 
+ENGLISH AND HEBREW
+------------------
+The app ships in two languages. Which one you get is decided in this order:
+
+  1. the language saved in YOUR account (Settings → שפה / Language),
+  2. failing that, the last choice made in this browser,
+  3. failing that, the browser's own language — Hebrew for a Hebrew browser,
+     English for everything else.
+
+Because the choice lives in the same per-user settings row as your country
+and pack price, it follows the account: sign in on a new phone and the app
+comes back up in the language you picked, with no setting to find again.
+Hebrew also flips the whole page to right-to-left, including the storage
+error banner.
+
+There is a language switch at the bottom of the sign-in screen too — that
+one is remembered in the browser only, since nobody is signed in yet.
+
+The translations live in the built bundle under assets/, not in a runtime
+file, so changing wording means a rebuild — unlike config.js or version.js.
+Anything stored in the database (trigger names, product names, country
+codes) deliberately stays English, so switching language never rewrites
+your history.
+
+
 BUMP THE VERSION NUMBER BEFORE EVERY UPLOAD
 -------------------------------------------
 version.js holds two lines — the version and the build date — and shows them
