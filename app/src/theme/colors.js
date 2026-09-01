@@ -14,6 +14,7 @@ export const colors = {
   smoke: "#3A3A36",
   ink: "#1C1B18",
   ember: "#E4572E",
+  emberMid: "#ED9073",
   emberSoft: "#F6C9B8",
   moss: "#5C7457",
   mossSoft: "#D6E0D0",
