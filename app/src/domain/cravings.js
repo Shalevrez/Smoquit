@@ -55,3 +55,29 @@ export function summarise(cravings, from, to = todayKey()) {
   }
   return { held, faced, rate: faced === 0 ? null : held / faced };
 }
+
+/**
+ * Two devices' craving logs, combined.
+ *
+ * The same argument as domain/entries.js makes for cigarettes: newest-write-
+ * wins would drop whatever the other device recorded while it was offline,
+ * and these are the rows that say somebody stood outside and did not smoke.
+ * A session is immutable and identified by when it happened, so a union by
+ * timestamp is both safe and enough — there is no edit to reconcile and no
+ * deletion to honour, because a craving cannot be undone.
+ */
+export function mergeCravings(mine, theirs) {
+  const days = new Set([...Object.keys(mine ?? {}), ...Object.keys(theirs ?? {})]);
+  const merged = {};
+
+  for (const day of days) {
+    const byTs = new Map();
+    for (const session of [...(mine?.[day] ?? []), ...(theirs?.[day] ?? [])]) {
+      const ts = Number(session?.ts);
+      if (!Number.isFinite(ts)) continue;
+      if (!byTs.has(ts)) byTs.set(ts, session);
+    }
+    merged[day] = [...byTs.values()].sort((a, b) => a.ts - b.ts);
+  }
+  return merged;
+}

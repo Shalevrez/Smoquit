@@ -19,6 +19,8 @@ import { countryFor, detectCountry } from "./data/countries.js";
 import { TABS } from "./data/tabs.js";
 import { SQ_LANG, sqIsLang, sqSetLang, sqT, useSqLang } from "./i18n/index.js";
 import { countOn, entriesOn, markDeleted } from "./domain/entries.js";
+import { buildProfile } from "./domain/profile.js";
+import { startExperiment, stopExperiment } from "./domain/experiments.js";
 import { todayKey } from "./lib/dates.js";
 import { migrate } from "./lib/migrate.js";
 import * as store from "./lib/store.js";
@@ -67,6 +69,11 @@ export function AppShell({ user }) {
   const [settings, setSettings] = React.useState(null);
   const [meta, setMeta] = React.useState(null);
   const [cravings, setCravings] = React.useState({});
+  // What has been said about the tips, and which swaps are being tried.
+  // Both are read by the coach rather than shown raw, so they live up here
+  // beside the log they are judged against.
+  const [tipFeedback, setTipFeedback] = React.useState({});
+  const [habits, setHabits] = React.useState({});
   const [ridingOut, setRidingOut] = React.useState(false);
   // Which sheet is up, if any: the trigger picker, then the time picker.
   const [askingTrigger, setAskingTrigger] = React.useState(null);
@@ -91,15 +98,27 @@ export function AppShell({ user }) {
         setCravings(cachedCravings);
         setGoal(store.cached("goal", null));
         setMeta(store.cached("meta", null));
+        setTipFeedback(store.cached("tipFeedback", {}));
+        setHabits(store.cached("habits", {}));
         setReady(true);
       }
 
-      const [freshLogs, freshGoal, freshMeta, freshSettings, freshCravings] = await Promise.all([
+      const [
+        freshLogs,
+        freshGoal,
+        freshMeta,
+        freshSettings,
+        freshCravings,
+        freshFeedback,
+        freshHabits,
+      ] = await Promise.all([
         store.refresh("logs", {}),
         store.refresh("goal", null),
         store.refresh("meta", null),
         store.refresh("settings", null),
         store.refresh("cravings", {}),
+        store.refresh("tipFeedback", {}),
+        store.refresh("habits", {}),
       ]);
 
       // Entries used to be filed by UTC date; put them under the local day
@@ -109,6 +128,8 @@ export function AppShell({ user }) {
       setMeta(migrated.meta);
       setGoal(freshGoal.value);
       setCravings(freshCravings.value ?? {});
+      setTipFeedback(freshFeedback.value ?? {});
+      setHabits(freshHabits.value ?? {});
 
       let saved = freshSettings.value;
       if (!saved) {
@@ -208,6 +229,41 @@ export function AppShell({ user }) {
     });
   }, []);
 
+  // Pressing the verdict you already gave takes it back. Somebody who
+  // mis-tapped should not have to live with a tip pinned to the top of
+  // their list forever, and there is nowhere else to undo it from.
+  const recordTipFeedback = React.useCallback((tipId, verdict) => {
+    setTipFeedback((prev) => {
+      const next = { ...prev };
+      if (next[tipId]?.verdict === verdict) delete next[tipId];
+      else next[tipId] = { verdict, at: Date.now() };
+      store.write("tipFeedback", next);
+      return next;
+    });
+  }, []);
+
+  const beginExperiment = React.useCallback(
+    (candidate) => {
+      setHabits((prev) => {
+        const next = startExperiment(prev, candidate, dayKey);
+        store.write("habits", next);
+        return next;
+      });
+    },
+    [dayKey],
+  );
+
+  const endExperiment = React.useCallback(
+    (id) => {
+      setHabits((prev) => {
+        const next = stopExperiment(prev, id, dayKey);
+        store.write("habits", next);
+        return next;
+      });
+    },
+    [dayKey],
+  );
+
   const removeLog = React.useCallback(
     (index) => {
       setLogs((prev) => {
@@ -217,6 +273,14 @@ export function AppShell({ user }) {
       });
     },
     [dayKey],
+  );
+
+  // One reading of this person's own behaviour, computed here and handed
+  // down, so that the tips and the habits screens cannot end up quoting
+  // different numbers at each other about the same fortnight.
+  const profile = React.useMemo(
+    () => buildProfile({ logs, cravings, goal, settings, meta }),
+    [logs, cravings, goal, settings, meta],
   );
 
   if (!ready) {
@@ -293,8 +357,18 @@ export function AppShell({ user }) {
             />
           )}
           {tab === "insights" && <InsightsTab logs={logs} meta={meta} />}
-          {tab === "tips" && <TipsTab />}
-          {tab === "habits" && <HabitsTab />}
+          {tab === "tips" && (
+            <TipsTab profile={profile} feedback={tipFeedback} onFeedback={recordTipFeedback} />
+          )}
+          {tab === "habits" && (
+            <HabitsTab
+              profile={profile}
+              habits={habits}
+              logs={logs}
+              onStart={beginExperiment}
+              onStop={endExperiment}
+            />
+          )}
           {tab === "goal" && (
             <GoalTab goal={goal} setGoal={setGoal} logs={logs} settings={settings} />
           )}

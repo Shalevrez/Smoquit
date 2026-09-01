@@ -555,3 +555,129 @@ test("the craving sheet reads right-to-left in Hebrew", async ({ page }) => {
   await page.getByRole("button", { name: "עבר לי" }).click();
   await expect(page.getByText("דחף אחד שעבר היום")).toBeVisible();
 });
+
+// ── Tips and habits, aimed at the person reading them ────────────────────
+//
+// The fixture account is seven days of real-looking log, so these are
+// assertions about a specific person: their first cigarette is usually
+// around eight, coffee is their commonest tag, and they are nowhere near
+// the baseline they set. Every number below is one the app should be able
+// to point at in the log.
+
+test("the tips lead with what the log actually says", async ({ page }) => {
+  await open(page);
+  await tab(page, "Tips");
+
+  await expect(page.getByText("For you right now")).toBeVisible();
+  // Their median first cigarette is 8am, which is what this tip is for.
+  await expect(page.getByText("Push the first one back")).toBeVisible();
+  await expect(
+    page.getByText(/Your first cigarette of the day is usually around 8am/),
+  ).toBeVisible();
+  // Five of their sixteen came with coffee, and the card says so.
+  await expect(
+    page.getByText("5 of the cigarettes you logged in the last two weeks came with Coffee."),
+  ).toBeVisible();
+  // The rest are still there, in the order they were written.
+  await expect(page.getByText("Everything else")).toBeVisible();
+});
+
+test("saying a tip does not work takes it out of the recommendations", async ({ page }) => {
+  const { written } = await open(page);
+  await tab(page, "Tips");
+
+  const card = page.getByText("Break the pairings").locator("xpath=..");
+  await card.getByRole("button", { name: "Not for me" }).click();
+
+  await written("tipFeedback").toMatchObject({ pairings: { verdict: "didnt" } });
+  // Gone from the top, and the fact that was arguing for it goes with it.
+  await expect(
+    page.getByText("5 of the cigarettes you logged in the last two weeks came with Coffee."),
+  ).toHaveCount(0);
+  // Not deleted, though — it is still in the library below.
+  await expect(page.getByText("Break the pairings")).toBeVisible();
+});
+
+test("a tip that works is pinned, and pressing it again takes that back", async ({ page }) => {
+  const { written } = await open(page);
+  await tab(page, "Tips");
+
+  const button = () =>
+    page.getByText("Drink cold water slowly").locator("xpath=..").getByRole("button", {
+      name: "This helps me",
+    });
+  await button().click();
+  await written("tipFeedback").toMatchObject({ water: { verdict: "worked" } });
+  await expect(
+    page.getByText("You marked this one as something that works for you."),
+  ).toBeVisible();
+
+  await button().click();
+  await written("tipFeedback").toEqual({});
+});
+
+test("the habits page offers the cue that is costing the most", async ({ page }) => {
+  await open(page);
+  await tab(page, "Habits");
+
+  await expect(page.getByText("Worth trying next")).toBeVisible();
+  await expect(page.getByText("Morning coffee")).toBeVisible();
+  // Five coffee cigarettes over seven tracked days, all of them around eight.
+  await expect(
+    page.getByText("Coffee: about 0.7 a day lately, most often around 8am."),
+  ).toBeVisible();
+});
+
+test("starting a swap begins measuring it against the log", async ({ page }) => {
+  const { written } = await open(page);
+  await tab(page, "Habits");
+  await page.getByRole("button", { name: "Try this for a week" }).first().click();
+
+  await written("habits").toMatchObject({
+    [`Coffee:${"2026-08-31"}`]: { trigger: "Coffee", cue: "Morning coffee", endedAt: null },
+  });
+  await expect(page.getByText("What you're trying")).toBeVisible();
+  await expect(page.getByText("Day 1 of 7")).toBeVisible();
+  // One day in is not a result, and the card says so rather than claiming one.
+  await expect(page.getByText("Too early to call. Check back in a day or two.")).toBeVisible();
+  // The same cue is not offered again while it is being tried; the next
+  // one down the list takes its place.
+  await expect(
+    page.getByText("Coffee: about 0.7 a day lately, most often around 8am."),
+  ).toHaveCount(0);
+  await expect(page.getByText("Work stress break")).toBeVisible();
+});
+
+test("stopping a swap keeps it out of the way", async ({ page }) => {
+  const { written } = await open(page);
+  await tab(page, "Habits");
+  await page.getByRole("button", { name: "Try this for a week" }).first().click();
+  await expect(page.getByText("What you're trying")).toBeVisible();
+
+  await page.getByRole("button", { name: "Stop this one" }).click();
+  await written("habits").toMatchObject({ "Coffee:2026-08-31": { endedAt: "2026-08-31" } });
+  await expect(page.getByText("What you're trying")).toHaveCount(0);
+});
+
+test("an account with nothing logged is not told anything about itself", async ({ page }) => {
+  const { errors } = await open(page, { data: { logs: {}, cravings: {}, meta: undefined } });
+  await tab(page, "Tips");
+  await expect(page.getByText("For you right now")).toHaveCount(0);
+  await expect(page.getByText(/These are in the order they were written/)).toBeVisible();
+  await tab(page, "Habits");
+  await expect(page.getByText(/Tag a few cigarettes with what set them off/)).toBeVisible();
+  await expect(page.getByText("Every swap")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("the personalised pages read right-to-left in Hebrew", async ({ page }) => {
+  await open(page, { lang: "he", data: { settings: { ...SETTINGS, lang: "he" } } });
+  await tab(page, "טיפים");
+  await expect(page.getByText("בשבילכם עכשיו")).toBeVisible();
+  await expect(page.getByText("זה עוזר לי").first()).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+  await tab(page, "הרגלים");
+  await expect(page.getByText("שווה לנסות עכשיו")).toBeVisible();
+  await expect(page.getByRole("button", { name: "לנסות את זה לשבוע" }).first()).toBeVisible();
+});
