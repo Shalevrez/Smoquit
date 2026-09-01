@@ -26,6 +26,7 @@ import { TRIGGERS } from "../data/triggers.js";
 import { summarise } from "./cravings.js";
 import { countOn, entriesOn } from "./entries.js";
 import { trackingStartedAt } from "./insights.js";
+import { pricePerCigarette, savedOver } from "./money.js";
 import { dayKey, dayKeysBetween } from "../lib/dates.js";
 
 /**
@@ -43,6 +44,11 @@ export const MIN_ENTRIES = 5;
 
 /** A change smaller than this either way is not a direction, it is weather. */
 const TREND_DEADBAND = 0.2;
+
+// What it takes before one day of the week is called out as the bad one.
+const MIN_WEEKDAYS = 2; // at least two of them tracked
+const MIN_WEEKDAY_ENTRIES = 3;
+const WEEKDAY_LIFT = 0.25; // and a quarter worse than an ordinary day
 
 const PARTS = [
   ["night", 22, 4],
@@ -86,8 +92,12 @@ export function buildProfile({ logs, cravings, goal, settings, meta, now = Date.
   const recent = windowStats(logs, recentKeys);
   const previous = previousKeys.length ? windowStats(logs, previousKeys) : null;
 
-  const allTimeHours = triggerHours(logs, trackedKeys);
-  const totalEntries = trackedKeys.reduce((sum, key) => sum + countOn(logs, key), 0);
+  // One pass over the whole record. The hour chart, the weekday rates and
+  // each trigger's usual hour all want as much history as there is rather
+  // than the last fortnight of it — a pattern in the clock is the one thing
+  // here that gets steadier the further back you look.
+  const whole = wholeRecord(logs, trackedKeys);
+  const totalEntries = whole.total;
 
   return {
     today: todayK,
@@ -99,31 +109,52 @@ export function buildProfile({ logs, cravings, goal, settings, meta, now = Date.
     previous,
     trend: direction(recent.perDay, previous?.perDay),
 
-    triggerRank: rankTriggers(recent, previous, allTimeHours),
-    peakHour: peakOf(recent.byHour),
+    // The whole record, which is what the Insights tab draws.
+    allTime: {
+      total: whole.total,
+      days: trackedKeys.length,
+      avgPerDay: whole.total / Math.max(trackedKeys.length, 1),
+      bestDay: whole.perDay.length ? Math.min(...whole.perDay) : 0,
+      smokeFreeDays: whole.perDay.filter((count) => count === 0).length,
+    },
+    last7: lastSevenDays(logs, now),
+
+    byHour: whole.byHour,
+    peakHour: peakOf(whole.byHour),
+    peakWindow: heaviestStretch(whole.byHour),
+    weekday: whole.weekday,
+    worstWeekday: worstWeekday(whole),
+
+    triggerRank: rankTriggers(recent, previous, whole.triggerHours),
     peakPart: peakPart(recent.byHour),
     firstOfDayHour: medianFirstHour(logs, recentKeys),
 
     cravings: cravingStats(cravings, recentKeys),
     streak: streaks(logs, trackedKeys, goal?.target ?? null),
     target: targetStats(logs, recentKeys, goal?.target ?? null),
-    money: moneyStats(recent, goal, settings),
+    money: {
+      pricePerCigarette: pricePerCigarette(settings),
+      recent: savedOver(logs, recentKeys, goal, settings),
+      allTime: savedOver(logs, trackedKeys, goal, settings),
+    },
   };
 }
 
-/** Counts over one stretch of days, from the entries that really are ones. */
+/**
+ * Counts over one stretch of days — a fortnight, usually — from the entries
+ * that really are ones. Weekdays are deliberately not counted here: two
+ * weeks holds two of each, which is not enough to say anything about
+ * anybody's Saturdays, so that reading is taken over the whole record.
+ */
 function windowStats(logs, keys) {
   const byHour = new Array(24).fill(0);
-  const byWeekday = new Array(7).fill(0);
   const triggers = {};
   let total = 0;
 
   for (const key of keys) {
-    const weekday = new Date(`${key}T00:00:00`).getDay();
     for (const entry of entriesOn(logs, key)) {
       total += 1;
       byHour[new Date(entry.ts).getHours()] += 1;
-      byWeekday[weekday] += 1;
       // "Unlogged" is a cigarette whose cause was not given. It belongs in
       // the total and the hour it happened in, and nowhere near a claim
       // about what sets this person off.
@@ -134,19 +165,121 @@ function windowStats(logs, keys) {
   }
 
   const days = Math.max(keys.length, 1);
-  return { days: keys.length, total, perDay: total / days, byHour, byWeekday, triggers };
+  return { days: keys.length, total, perDay: total / days, byHour, triggers };
 }
 
-/** Hour histogram per trigger, over the whole record. */
-function triggerHours(logs, keys) {
-  const hours = {};
+/**
+ * One walk through every tracked day.
+ *
+ * `perDay` is a count for every day in the range, including the ones with
+ * no key at all — those are the days nobody opened the app, which are the
+ * days nothing was smoked, and leaving them out is how a perfect week
+ * becomes invisible and a best day can never be zero. Same reasoning as the
+ * insights tab has always used; it just happens once now instead of in
+ * three places with three slightly different answers.
+ */
+function wholeRecord(logs, keys) {
+  const byHour = new Array(24).fill(0);
+  const triggerHours = {};
+  const weekdayCounts = new Array(7).fill(0);
+  const weekdayDays = new Array(7).fill(0);
+  const perDay = [];
+  let total = 0;
+
   for (const key of keys) {
-    for (const entry of entriesOn(logs, key)) {
-      if (!entry.trigger || entry.trigger === "Unlogged") continue;
-      (hours[entry.trigger] ??= new Array(24).fill(0))[new Date(entry.ts).getHours()] += 1;
+    const weekday = new Date(`${key}T00:00:00`).getDay();
+    const entries = entriesOn(logs, key);
+    weekdayDays[weekday] += 1;
+    weekdayCounts[weekday] += entries.length;
+    perDay.push(entries.length);
+    total += entries.length;
+
+    for (const entry of entries) {
+      const hour = new Date(entry.ts).getHours();
+      byHour[hour] += 1;
+      if (entry.trigger && entry.trigger !== "Unlogged") {
+        (triggerHours[entry.trigger] ??= new Array(24).fill(0))[hour] += 1;
+      }
     }
   }
-  return hours;
+
+  return {
+    total,
+    perDay,
+    byHour,
+    triggerHours,
+    weekday: {
+      counts: weekdayCounts,
+      days: weekdayDays,
+      perDay: weekdayCounts.map((count, i) => (weekdayDays[i] ? count / weekdayDays[i] : 0)),
+    },
+  };
+}
+
+/**
+ * The last seven calendar days, today last.
+ *
+ * Counted back from today rather than taken off the end of the tracked
+ * range, because this is the chart of the week just had — a day before
+ * tracking began is a real zero on it, not a day to leave out.
+ */
+function lastSevenDays(logs, now) {
+  const days = [];
+  for (let back = 6; back >= 0; back--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - back);
+    const key = dayKey(date);
+    days.push({ date: key, count: countOn(logs, key) });
+  }
+  return days;
+}
+
+/**
+ * The three-hour stretch that carries the most, wrapping past midnight.
+ *
+ * A single peak hour is a thin thing to plan around — it moves with one
+ * cigarette, and nobody's day is organised to the hour. Three hours is a
+ * stretch somebody can recognise as a part of their day and actually put
+ * something else into.
+ */
+function heaviestStretch(byHour, width = 3) {
+  const total = byHour.reduce((sum, count) => sum + count, 0);
+  if (!total) return null;
+
+  let best = { from: 0, count: -1 };
+  for (let from = 0; from < 24; from++) {
+    let count = 0;
+    for (let i = 0; i < width; i++) count += byHour[(from + i) % 24];
+    if (count > best.count) best = { from, count };
+  }
+  return {
+    from: best.from,
+    to: (best.from + width - 1) % 24,
+    count: best.count,
+    share: best.count / total,
+  };
+}
+
+/**
+ * The day of the week that is worse than the rest, if one is.
+ *
+ * Per tracked occurrence of that weekday rather than per total, or a
+ * fortnight that happens to hold three Mondays would elect Monday. Reported
+ * only when it is meaningfully above the ordinary day and rests on more
+ * than a single instance — "your Saturdays are bad" off one Saturday is the
+ * kind of claim that makes somebody stop believing the rest of the page.
+ */
+function worstWeekday(whole) {
+  const mean = whole.total / Math.max(whole.perDay.length, 1);
+  if (!mean) return null;
+
+  let worst = null;
+  whole.weekday.perDay.forEach((rate, weekday) => {
+    if (whole.weekday.days[weekday] < MIN_WEEKDAYS) return;
+    if (whole.weekday.counts[weekday] < MIN_WEEKDAY_ENTRIES) return;
+    if (!worst || rate > worst.perDay) worst = { weekday, perDay: rate, lift: rate / mean - 1 };
+  });
+  return worst && worst.lift >= WEEKDAY_LIFT ? worst : null;
 }
 
 /**
@@ -319,26 +452,5 @@ function targetStats(logs, keys, target) {
     daysMet,
     daysMissed: keys.length - daysMet,
     metRate: keys.length ? daysMet / keys.length : null,
-  };
-}
-
-/**
- * What the recent fortnight was worth in money, against the old baseline.
- *
- * Same arithmetic the goal and today screens do — cigarettes not smoked
- * against the usual day, priced one at a time — kept in numbers here so the
- * currency symbol stays a display concern.
- */
-function moneyStats(recent, goal, settings) {
-  const pricePerCigarette = (settings?.pricePerPack ?? 13) / 20;
-  if (!goal?.baseline) {
-    return { pricePerCigarette, avoided: null, savedRecent: null, savedPerDay: null };
-  }
-  const avoided = Math.max(0, goal.baseline * recent.days - recent.total);
-  return {
-    pricePerCigarette,
-    avoided,
-    savedRecent: avoided * pricePerCigarette,
-    savedPerDay: recent.days ? (avoided * pricePerCigarette) / recent.days : null,
   };
 }

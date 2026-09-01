@@ -681,3 +681,98 @@ test("the personalised pages read right-to-left in Hebrew", async ({ page }) => 
   await expect(page.getByText("שווה לנסות עכשיו")).toBeVisible();
   await expect(page.getByRole("button", { name: "לנסות את זה לשבוע" }).first()).toBeVisible();
 });
+
+// ── Insights, once it leads with a direction ─────────────────────────────
+
+/** A log of `perDay` cigarettes a day across a range of August days. */
+const fortnight = (from, to, perDay, trigger = "Coffee") => {
+  const logs = {};
+  for (let day = from; day <= to; day++) {
+    const date = `2026-08-${String(day).padStart(2, "0")}`;
+    logs[date] = Array.from({ length: perDay }, (_, i) => ({
+      ts: new Date(`${date}T${String(8 + i).padStart(2, "0")}:00:00+03:00`).getTime(),
+      trigger,
+    }));
+  }
+  return logs;
+};
+
+test("insights open with which way it is going", async ({ page }) => {
+  await open(page);
+  await tab(page, "Insights");
+  await expect(page.getByText("The last two weeks", { exact: true })).toBeVisible();
+  // Sixteen cigarettes over the seven days this account has been tracked.
+  await expect(page.getByText("2.3", { exact: true }).first()).toBeVisible();
+  // One week of history is not two fortnights, and it says so rather than
+  // comparing somebody against a fortnight they never lived.
+  await expect(page.getByText(/Too early to compare fortnights/)).toBeVisible();
+});
+
+test("a fortnight with one behind it is compared against it", async ({ page }) => {
+  await open(page, {
+    data: {
+      logs: { ...fortnight(4, 17, 8), ...fortnight(18, 31, 2) },
+      cravings: {},
+      meta: { schemaVersion: 2, trackingStartedAt: "2026-08-04" },
+    },
+  });
+  await tab(page, "Insights");
+  await expect(page.getByText("Down from 8.0 a day the fortnight before.")).toBeVisible();
+  // And the trigger that fell carries the arrow that says so.
+  await expect(page.getByTitle("down on the fortnight before")).toBeVisible();
+});
+
+test("the urges are on the page at last", async ({ page }) => {
+  // Recorded since the craving sheet shipped, and shown nowhere until now.
+  await open(page);
+  await tab(page, "Insights");
+  await expect(
+    page.getByText("You rode out 1 of the 2 urges you sat with in the last two weeks."),
+  ).toBeVisible();
+  await expect(page.getByText("50% ridden out")).toBeVisible();
+});
+
+test("an account that has never sat with one is told how to", async ({ page }) => {
+  await open(page, { data: { cravings: {} } });
+  await tab(page, "Insights");
+  await expect(page.getByText(/Next time one comes, use/)).toBeVisible();
+});
+
+test("the peak is a stretch of the day, not a single hour", async ({ page }) => {
+  await open(page);
+  await tab(page, "Insights");
+  await expect(
+    page.getByText(/Your heaviest stretch is 8am–10am, which carries 38%/),
+  ).toBeVisible();
+});
+
+test("the goal tab and the insights tab agree about the money", async ({ page }) => {
+  // They used not to: the goal tab totalled over the days that had a key in
+  // the log, which skips every day nobody opened the app — the clean ones.
+  await open(page);
+  await tab(page, "Insights");
+  await expect(page.getByText("₪160")).toBeVisible();
+  await tab(page, "Goal");
+  await expect(page.getByText("₪160")).toBeVisible();
+});
+
+test("the streaks are counted, including the days with no key", async ({ page }) => {
+  await open(page);
+  await tab(page, "Insights");
+  await expect(page.getByText("Streaks")).toBeVisible();
+  await expect(page.getByText("Longest run")).toBeVisible();
+  // The fixture's 29th has no entry at all, and is the run.
+  await expect(page.getByText("Smoke-free days")).toBeVisible();
+  await expect(page.getByText("Days at or under target")).toBeVisible();
+});
+
+test("the insights page reads right-to-left in Hebrew", async ({ page }) => {
+  await open(page, { lang: "he", data: { settings: { ...SETTINGS, lang: "he" } } });
+  await tab(page, "תובנות");
+  await expect(page.getByText("השבועיים האחרונים", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "דחפים שישבתם איתם" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "רצפים" })).toBeVisible();
+  // Hebrew reads the clock in twenty-four hours, here as everywhere else.
+  await expect(page.getByText(/08:00–10:00/)).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+});

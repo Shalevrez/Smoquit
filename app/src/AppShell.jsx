@@ -356,7 +356,7 @@ export function AppShell({ user }) {
               markedNoneToday={Array.isArray(logs[dayKey]) && todayLogs.length === 0}
             />
           )}
-          {tab === "insights" && <InsightsTab logs={logs} meta={meta} />}
+          {tab === "insights" && <InsightsTab profile={profile} settings={settings} />}
           {tab === "tips" && (
             <TipsTab profile={profile} feedback={tipFeedback} onFeedback={recordTipFeedback} />
           )}
@@ -370,7 +370,7 @@ export function AppShell({ user }) {
             />
           )}
           {tab === "goal" && (
-            <GoalTab goal={goal} setGoal={setGoal} logs={logs} settings={settings} />
+            <GoalTab goal={goal} setGoal={setGoal} profile={profile} settings={settings} />
           )}
           {tab === "settings" && <SettingsTab settings={settings} onChange={updateSettings} />}
         </main>

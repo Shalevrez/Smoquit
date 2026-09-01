@@ -126,9 +126,6 @@ export const SQ_HE = {
   "Days tracked": "ימים במעקב",
   "Best (lowest) day": "היום הכי טוב",
   "When you smoke": "מתי אתם מעשנים",
-  "Your peak is around ": "השיא שלכם הוא בסביבות ",
-  ". Plan a replacement for that window — a walk, water, a piece of gum.":
-    " — תכננו תחליף לשעה הזו: הליכה, מים, מסטיק.",
   "{count} at {hour}:00": "{count} בשעה {hour}:00",
   "Top triggers": "טריגרים מובילים",
   "No triggers tagged yet.": "עדיין לא תויגו טריגרים.",
@@ -311,4 +308,26 @@ export const SQ_HE = {
     "עלייה ברמז הזה מאז שהתחלתם — אולי תחליף אחר יתאים יותר.",
   "No real change on this cue yet. Give it the full week.":
     "עדיין אין שינוי אמיתי ברמז הזה. תנו לזה את כל השבוע.",
+  // ── Insights, once the page leads with a direction rather than a wall ──
+  "The last two weeks": "השבועיים האחרונים",
+  "a day, on average.": "ביום, בממוצע.",
+  "Too early to compare fortnights — this is your first.":
+    "מוקדם מדי להשוות שבועיים — אלה השבועיים הראשונים שלכם.",
+  "Down from {n} a day the fortnight before.": "ירידה מ־{n} ביום בשבועיים שלפני.",
+  "Up from {n} a day the fortnight before.": "עלייה מ־{n} ביום בשבועיים שלפני.",
+  "About the same as the fortnight before.": "בערך כמו בשבועיים שלפני.",
+  "Urges you sat with": "דחפים שישבתם איתם",
+  "Nothing recorded yet. Next time one comes, use \u201cI want one right now\u201d on the Today tab — what happens either way gets counted here.":
+    "עדיין לא תועד כלום. בפעם הבאה שיגיע דחף, השתמשו ב\u201eבא לי עכשיו\u201d בטאב היום — מה שיקרה, לכאן או לכאן, ייספר כאן.",
+  "{pct}% ridden out": "\u200f{pct}% שעברו בלי סיגריה",
+  "Your heaviest stretch is {from}–{to}, which carries {pct}% of everything you've logged. Plan a replacement for that window — a walk, water, a piece of gum.":
+    "הקטע העמוס ביותר שלכם הוא {from}–{to}, ובו {pct}% מכל מה שתיעדתם. תכננו תחליף לחלון הזה — הליכה, מים, מסטיק.",
+  "{day} is your heaviest day of the week, at about {n} a day.":
+    "\u200f{day} הוא היום העמוס בשבוע שלכם, עם בערך {n} ביום.",
+  "up on the fortnight before": "עלייה ביחס לשבועיים שלפני",
+  "down on the fortnight before": "ירידה ביחס לשבועיים שלפני",
+  Streaks: "רצפים",
+  "Smoke-free run": "רצף בלי עישון",
+  "Longest run": "הרצף הארוך ביותר",
+  "Days at or under target": "ימים בתוך היעד",
 };

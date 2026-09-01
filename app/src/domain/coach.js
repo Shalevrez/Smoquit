@@ -236,11 +236,11 @@ function applicable(id, profile) {
   }
 
   // ── Money, once there is enough of it to be worth the sentence ────────
-  const money = profile.money ?? {};
-  if (rule.money && money.avoided != null && money.avoided >= MONEY_CIGARETTES) {
+  const avoided = profile.money?.recent?.avoided;
+  if (rule.money && avoided != null && avoided >= MONEY_CIGARETTES) {
     hits.push({
       score: W.money,
-      reason: { key: REASONS.moneyAdding, params: { n: Math.round(money.avoided) } },
+      reason: { key: REASONS.moneyAdding, params: { n: Math.round(avoided) } },
     });
   }
 

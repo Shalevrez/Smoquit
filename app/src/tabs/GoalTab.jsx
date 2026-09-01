@@ -5,7 +5,6 @@
 import React from "react";
 import { Stat } from "../components/Stat.jsx";
 import { countryFor } from "../data/countries.js";
-import { countOn } from "../domain/entries.js";
 import { sqT } from "../i18n/index.js";
 import { saveKey } from "../lib/storage.js";
 import { colors } from "../theme/colors.js";
@@ -17,10 +16,9 @@ import {
   saveButtonStyle,
   statGridStyle,
 } from "../theme/styles.js";
-export function GoalTab({ goal, setGoal, logs, settings }) {
+export function GoalTab({ goal, setGoal, profile, settings }) {
   const currency =
       settings != null && settings.country ? countryFor(settings.country).currency : "$",
-    pricePerCigarette = (settings?.pricePerPack ?? 13) / 20,
     [baseline, setBaseline] = React.useState(goal?.baseline ?? ""),
     [target, setTarget] = React.useState(goal?.target ?? ""),
     [quitDate, setQuitDate] = React.useState(goal?.quitDate ?? ""),
@@ -42,16 +40,13 @@ export function GoalTab({ goal, setGoal, logs, settings }) {
           : null,
       [goal],
     ),
-    totalSaved = React.useMemo(() => {
-      if (!(goal != null && goal.baseline)) return null;
-      // Every tracked day contributes the cigarettes NOT smoked that day
-      // against the old baseline, priced one at a time.
-      let saved = 0;
-      for (const key of Object.keys(logs ?? {})) {
-        saved += Math.max(0, goal.baseline - countOn(logs, key)) * pricePerCigarette;
-      }
-      return saved;
-    }, [goal, logs, pricePerCigarette]);
+    // Every tracked day contributes the cigarettes NOT smoked that day
+    // against the old baseline, priced one at a time — counted once, in
+    // domain/money.js, over the same days everything else on the Insights
+    // tab counts. This used to be summed here over the days that had a key
+    // in the log, which silently skipped every day nobody opened the app —
+    // the days with nothing on them, so the best ones.
+    totalSaved = profile?.money?.allTime?.saved ?? null;
   return (
     <div>
       {goal?.reason && (

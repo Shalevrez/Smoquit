@@ -569,3 +569,53 @@ export const stopButtonStyle = {
   fontWeight: 600,
   cursor: "pointer",
 };
+
+// ── Insights ─────────────────────────────────────────────────────────────
+//
+// The page opens with one number rather than a grid of them, because the
+// question somebody comes here with is "is this getting better or not" and
+// a wall of five equal-weight stats answers it last.
+export const headlineCardStyle = {
+  background: colors.breath,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 14,
+  padding: "18px 20px",
+  marginBottom: 14,
+};
+export const headlineNumberStyle = {
+  fontFamily: "Georgia, serif",
+  fontSize: 40,
+  fontWeight: 700,
+  color: colors.ink,
+  lineHeight: 1.1,
+  // Numerals read left-to-right in Hebrew too, and this one is large enough
+  // that the bidi algorithm getting it wrong would be unmissable.
+  direction: "ltr",
+};
+export const headlineCaptionStyle = {
+  fontSize: 13,
+  color: colors.smoke,
+  lineHeight: 1.5,
+  marginTop: 6,
+};
+export const eyebrowStyle = {
+  fontSize: 11,
+  textTransform: "uppercase",
+  letterSpacing: 1,
+  color: colors.ash,
+  marginBottom: 8,
+};
+
+/**
+ * The little arrow beside a trigger. Vertical on purpose: an arrow that
+ * points sideways has to be mirrored in Hebrew and is a standing invitation
+ * to forget to, whereas up and down mean the same thing in both directions.
+ */
+export function trendMarkStyle(rising) {
+  return {
+    fontSize: 12,
+    fontWeight: 700,
+    color: rising ? colors.ember : colors.moss,
+    marginInlineStart: 6,
+  };
+}

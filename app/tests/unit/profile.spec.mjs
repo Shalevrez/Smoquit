@@ -210,5 +210,92 @@ test("the target is measured against the days it was actually meant for", () => 
   // Seven tracked days: one over target, six at or under it (the empty ones
   // included — a day with nothing on it meets any target there is).
   expect(profile.target).toMatchObject({ target: 5, daysMet: 6, daysMissed: 1 });
-  expect(profile.money.avoided).toBeGreaterThan(0);
+  expect(profile.money.recent.avoided).toBeGreaterThan(0);
+});
+
+// ── The readings the Insights tab draws ─────────────────────────────────
+
+test("the heaviest stretch is three hours, and it can cross midnight", () => {
+  // Nothing but late nights: 23:00, 00:00 and 01:00. A window that could
+  // not wrap would report some empty stretch of the afternoon instead.
+  const night = {};
+  for (const day of [28, 29, 30]) {
+    night[key(day)] = [
+      { ts: at(day, 23), trigger: "Boredom" },
+      { ts: at(day, 0), trigger: "Boredom" },
+      { ts: at(day, 1), trigger: "Boredom" },
+    ];
+  }
+  const profile = profileOf(night);
+  expect(profile.peakWindow).toMatchObject({ from: 23, to: 1, count: 9, share: 1 });
+});
+
+test("the heaviest stretch is a stretch, not the tallest single hour", () => {
+  // 09:00 is the tallest hour on its own, but 13:00–15:00 together carry
+  // more — which is the window somebody can actually plan around.
+  const logs = {
+    [key(30)]: [
+      { ts: at(30, 9), trigger: "Coffee" },
+      { ts: at(30, 9, 30), trigger: "Coffee" },
+      { ts: at(30, 9, 45), trigger: "Coffee" },
+      { ts: at(30, 13), trigger: "Stress" },
+      { ts: at(30, 13, 30), trigger: "Stress" },
+      { ts: at(30, 14), trigger: "Stress" },
+      { ts: at(30, 15), trigger: "Stress" },
+    ],
+  };
+  expect(profileOf(logs).peakWindow).toMatchObject({ from: 13, to: 15, count: 4 });
+});
+
+test("a bad day of the week is only called out once it is a habit", () => {
+  // One heavy Saturday among quiet days is a Saturday, not a pattern, and
+  // saying otherwise is how somebody stops believing the rest of the page.
+  const oneSaturday = profileOf(logsFrom({ 29: many(9, "Social"), 30: [[9, "Coffee"]] }));
+  expect(new Date(`${key(29)}T00:00:00`).getDay()).toBe(6);
+  expect(oneSaturday.worstWeekday).toBeNull();
+
+  // Two of them, both heavy, against quiet weekdays: now it is worth saying.
+  const spec = { 22: many(8, "Social"), 29: many(8, "Social") };
+  for (const day of [23, 24, 25, 26, 27, 28, 30]) spec[day] = [[9, "Coffee"]];
+  const profile = buildProfile({
+    logs: logsFrom(spec),
+    meta: { trackingStartedAt: key(22) },
+    now: NOW,
+  });
+  expect(profile.worstWeekday.weekday).toBe(6);
+  expect(profile.worstWeekday.lift).toBeGreaterThan(0.25);
+});
+
+test("the week chart counts back from today, tracked or not", () => {
+  const profile = profileOf(logsFrom({ 30: many(2, "Coffee") }));
+  expect(profile.last7).toHaveLength(7);
+  expect(profile.last7.at(-1).date).toBe(key(31));
+  expect(profile.last7.at(-2)).toEqual({ date: key(30), count: 2 });
+  expect(profile.last7.every((day) => typeof day.count === "number")).toBe(true);
+});
+
+test("the best day can be zero, because a day with nothing on it is a day", () => {
+  const profile = profileOf(logsFrom({ 25: many(3, "Coffee") }));
+  expect(profile.allTime).toMatchObject({ total: 3, days: 7, bestDay: 0, smokeFreeDays: 6 });
+  expect(profile.allTime.avgPerDay).toBeCloseTo(3 / 7);
+});
+
+test("money counts the days nobody opened the app, which are the good ones", () => {
+  // The bug this is here to stop coming back: totalling only over the days
+  // that have a key in the log skips every clean day, so the saving
+  // reported is smaller than the saving made.
+  const profile = profileOf(logsFrom({ 25: many(5, "Coffee") }), {
+    goal: { baseline: 10 },
+    settings: { pricePerPack: 40 },
+  });
+  // Seven tracked days at ten a day is seventy; five were smoked.
+  expect(profile.money.allTime.avoided).toBe(65);
+  expect(profile.money.allTime.saved).toBe(65 * 2);
+  expect(profile.money.pricePerCigarette).toBe(2);
+});
+
+test("no baseline means no saving, rather than a saving of nothing", () => {
+  const profile = profileOf(logsFrom({ 30: many(6, "Coffee") }));
+  expect(profile.money.allTime.saved).toBeNull();
+  expect(profile.money.recent.avoided).toBeNull();
 });

@@ -4,6 +4,7 @@
 
 import React from "react";
 import { countryFor } from "../data/countries.js";
+import { avoidedOn, pricePerCigarette } from "../domain/money.js";
 import { sqT } from "../i18n/index.js";
 import { formatTime } from "../lib/dates.js";
 import { colors } from "../theme/colors.js";
@@ -34,13 +35,12 @@ export function TodayTab({
     target = goal?.target ?? null,
     percentOfTarget = target ? Math.min(100, (count / Math.max(1, target)) * 100) : 0,
     currency = settings != null && settings.country ? countryFor(settings.country).currency : "$",
-    pricePerCigarette = (settings?.pricePerPack ?? 13) / 20,
+    // Same arithmetic as the running total on the goal and insights tabs,
+    // from the same place, so today's figure and the total it feeds can
+    // never be computed two different ways.
     savedToday = React.useMemo(
-      () =>
-        goal != null && goal.baseline
-          ? Math.max(0, goal.baseline - count) * pricePerCigarette
-          : null,
-      [goal, count, pricePerCigarette],
+      () => (goal?.baseline ? avoidedOn(count, goal.baseline) * pricePerCigarette(settings) : null),
+      [goal, count, settings],
     );
   return (
     <div>
