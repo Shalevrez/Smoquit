@@ -46,12 +46,7 @@ export function computeInsights(logs, meta) {
   const smokeFreeDays = countsPerDay.filter((count) => count === 0).length;
 
   const peakHour = byHour.indexOf(Math.max(...byHour));
-  const peakHourLabel =
-    total === 0
-      ? "—"
-      : SQ_LANG === "he"
-        ? `${String(peakHour).padStart(2, "0")}:00`
-        : `${peakHour === 0 ? 12 : peakHour > 12 ? peakHour - 12 : peakHour}${peakHour >= 12 ? "pm" : "am"}`;
+  const peakHourLabel = total === 0 ? "—" : formatHour(peakHour);
 
   const topTriggers = Object.entries(triggerCounts)
     .sort(([, a], [, b]) => b - a)
@@ -72,6 +67,7 @@ export function computeInsights(logs, meta) {
   return {
     total,
     byHour,
+    peakHour,
     days,
     avgPerDay,
     bestDay,
@@ -80,6 +76,18 @@ export function computeInsights(logs, meta) {
     topTriggers,
     last7,
   };
+}
+
+/**
+ * An hour of the day, written the way the reader expects to see it: a
+ * twelve-hour clock in English, a twenty-four hour one in Hebrew. Both the
+ * sentence about the peak and the axis under the chart go through here, so
+ * they can never disagree about what to call the same hour.
+ */
+export function formatHour(hour) {
+  if (SQ_LANG === "he") return `${String(hour).padStart(2, "0")}:00`;
+  const twelve = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${twelve}${hour >= 12 ? "pm" : "am"}`;
 }
 
 /**

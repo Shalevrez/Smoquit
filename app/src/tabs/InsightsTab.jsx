@@ -3,7 +3,9 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import React from "react";
+import { HourChart } from "../components/HourChart.jsx";
 import { Stat } from "../components/Stat.jsx";
+import { WeekChart } from "../components/WeekChart.jsx";
 import { computeInsights } from "../domain/insights.js";
 import { sqT, useSqLang } from "../i18n/index.js";
 import { colors } from "../theme/colors.js";
@@ -11,7 +13,6 @@ import {
   barFillStyle,
   barTrackStyle,
   emptyBoxStyle,
-  hourChartStyle,
   sectionHeadingStyle,
   statGridStyle,
 } from "../theme/styles.js";
@@ -26,9 +27,6 @@ export function InsightsTab({ logs, meta }) {
         )}
       </div>
     );
-  // Both charts are drawn as percentages of their own tallest bar.
-  const tallestHour = Math.max(...insights.byHour, 1);
-  const tallestDay = Math.max(...insights.last7.map((day) => day.count), 1);
   return (
     <div>
       <div style={statGridStyle}>
@@ -56,45 +54,7 @@ export function InsightsTab({ logs, meta }) {
         </strong>
         {sqT(". Plan a replacement for that window — a walk, water, a piece of gum.")}
       </div>
-      <div style={hourChartStyle}>
-        {insights.byHour.map((count, hour) => (
-          <div
-            key={hour}
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "flex-end",
-              alignItems: "center",
-            }}
-          >
-            <div
-              title={sqT("{count} at {hour}:00", {
-                count,
-                hour,
-              })}
-              style={{
-                width: "70%",
-                height: `${(count / tallestHour) * 90 + (count ? 6 : 0)}px`,
-                background: count === tallestHour && count > 0 ? colors.ember : colors.emberSoft,
-                borderRadius: "3px 3px 0 0",
-                transition: "height .3s",
-              }}
-            />
-            {hour % 6 === 0 && (
-              <span
-                style={{
-                  fontSize: 9,
-                  color: colors.ash,
-                  marginTop: 3,
-                }}
-              >
-                {hour}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+      <HourChart byHour={insights.byHour} peakHour={insights.peakHour} />
       <h3 style={sectionHeadingStyle}>{sqT("Top triggers")}</h3>
       {insights.topTriggers.length === 0 ? (
         <div
@@ -145,56 +105,7 @@ export function InsightsTab({ logs, meta }) {
         </div>
       )}
       <h3 style={sectionHeadingStyle}>{sqT("Last 7 days")}</h3>
-      <div
-        style={{
-          display: "flex",
-          gap: 6,
-          alignItems: "flex-end",
-          height: 90,
-        }}
-      >
-        {insights.last7.map((day) => (
-          <div
-            key={day.date}
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              height: "100%",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                color: colors.smoke,
-                marginBottom: 2,
-                fontWeight: 600,
-              }}
-            >
-              {day.count}
-            </span>
-            <div
-              style={{
-                width: "68%",
-                height: `${(day.count / tallestDay) * 70 + 2}px`,
-                background: colors.moss,
-                borderRadius: "3px 3px 0 0",
-              }}
-            />
-            <span
-              style={{
-                fontSize: 10,
-                color: colors.ash,
-                marginTop: 4,
-              }}
-            >
-              {day.label}
-            </span>
-          </div>
-        ))}
-      </div>
+      <WeekChart days={insights.last7} />
     </div>
   );
 }

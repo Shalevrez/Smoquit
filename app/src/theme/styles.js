@@ -186,10 +186,85 @@ export const statCardStyle = {
 export const hourChartStyle = {
   display: "flex",
   alignItems: "flex-end",
-  gap: 2,
-  height: 110,
+  gap: 3,
   borderBottom: `1px solid ${colors.line}`,
-  paddingBottom: 2,
+  paddingBottom: 3,
+};
+export const hourColumnStyle = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "flex-end",
+};
+// The count over the tallest bar, in the headroom the other columns leave
+// empty — so labelling it costs the chart no height.
+export const peakCountStyle = {
+  fontSize: 10,
+  fontWeight: 700,
+  color: colors.ember,
+  textAlign: "center",
+  lineHeight: "14px",
+  height: 14,
+};
+export const hourAxisStyle = {
+  display: "flex",
+  gap: 3,
+  height: 16,
+  marginTop: 5,
+};
+export const hourAxisLabelStyle = {
+  position: "absolute",
+  top: 0,
+  fontSize: 10,
+  whiteSpace: "nowrap",
+};
+// The bar itself: how tall it stands in its track, and how round its cap is.
+// A one-cigarette bar is only a few pixels high, and a five-pixel radius on
+// a four-pixel bar draws a lozenge rather than a bar — so the corner never
+// exceeds half the height.
+export function barShape(count, scale, trackHeight) {
+  // A non-zero hour never disappears: it is always worth at least a few
+  // pixels, however quiet it was next to the peak.
+  const height = count === 0 ? 0 : Math.max(4, Math.round((count / scale) * trackHeight));
+  const radius = Math.min(5, Math.max(2, Math.round(height / 2)));
+  return {
+    height,
+    borderRadius: `${radius}px ${radius}px 2px 2px`,
+  };
+}
+
+// The slot a bar grows inside: an hour with nothing in it still occupies
+// its place on the chart instead of leaving a gap.
+export const chartTrackStyle = {
+  width: "100%",
+  background: colors.breath,
+  borderRadius: 5,
+  display: "flex",
+  alignItems: "flex-end",
+  overflow: "hidden",
+};
+export const weekChartStyle = {
+  display: "flex",
+  gap: 6,
+  alignItems: "flex-end",
+};
+export const weekColumnStyle = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "flex-end",
+};
+export const weekCountStyle = {
+  fontSize: 11,
+  fontWeight: 600,
+  textAlign: "center",
+  lineHeight: "16px",
+  height: 16,
+};
+export const weekLabelStyle = {
+  fontSize: 11,
+  textAlign: "center",
+  marginTop: 6,
 };
 export const tipRowStyle = {
   display: "flex",
