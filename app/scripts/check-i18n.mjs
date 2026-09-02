@@ -31,6 +31,10 @@ const DYNAMIC = [
   ["data/tabs.js", "TABS", ["label"]],
   ["data/tips.js", "TIPS", ["t", "d"]],
   ["data/habits.js", "HABITS", ["cue", "swap"]],
+  // The sentence a tip is recommended with, and the words that go into one.
+  // Both reach sqT() through a variable, from domain/coach.js.
+  ["domain/coach.js", "REASONS", "values"],
+  ["domain/coach.js", "PART_WORDS", null],
   ["data/breathing.js", "BREATH_PHASES", ["label"]],
   ["data/countries.js", "COUNTRIES", ["name"]],
   ["data/countries.js", "FALLBACK_COUNTRY", ["name"]],

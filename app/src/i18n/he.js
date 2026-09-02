@@ -126,9 +126,6 @@ export const SQ_HE = {
   "Days tracked": "ימים במעקב",
   "Best (lowest) day": "היום הכי טוב",
   "When you smoke": "מתי אתם מעשנים",
-  "Your peak is around ": "השיא שלכם הוא בסביבות ",
-  ". Plan a replacement for that window — a walk, water, a piece of gum.":
-    " — תכננו תחליף לשעה הזו: הליכה, מים, מסטיק.",
   "{count} at {hour}:00": "{count} בשעה {hour}:00",
   "Top triggers": "טריגרים מובילים",
   "No triggers tagged yet.": "עדיין לא תויגו טריגרים.",
@@ -241,4 +238,96 @@ export const SQ_HE = {
   " in this folder and paste in your Supabase Project URL and anon key (from Supabase → Settings → API), then reload this page.":
     " בתיקייה הזו, הדביקו את כתובת הפרויקט ומפתח ה־anon מ־Supabase (דרך Supabase ← Settings ← API), ואז רעננו את הדף.",
   "Prices show in {currency} {code}.": "המחירים מוצגים ב־\u200e{currency} {code}.",
+  // ── The tips written for a signal, and the coaching around them ───────
+  "Decide the last one before the evening starts": "החליטו על האחרונה עוד לפני שהערב מתחיל",
+  "Late cigarettes are usually about winding down, not nicotine. Pick the hour you stop, and put the pack somewhere you'd have to get up for.":
+    "סיגריות מאוחרות הן בדרך כלל עניין של הרגעה, לא של ניקוטין. בחרו את השעה שבה אתם מפסיקים, ושימו את החפיסה במקום שצריך לקום בשבילו.",
+  "Push the first one back": "דחו את הראשונה של היום",
+  "The first cigarette sets the pace of the whole day. Move it fifteen minutes later each morning — shower first, eat first, leave the house first.":
+    "הסיגריה הראשונה קובעת את הקצב של כל היום. דחו אותה בחמש עשרה דקות בכל בוקר — קודם מקלחת, קודם אוכל, קודם לצאת מהבית.",
+  "Aim at the day you actually have": "כוונו ליום שבאמת יש לכם",
+  "A target you miss most days stops being a target. Set it one below your real average, hold it for a week, then take another one off.":
+    "יעד שמפספסים ברוב הימים מפסיק להיות יעד. קבעו אותו אחת מתחת לממוצע האמיתי שלכם, החזיקו שבוע, ואז הורידו עוד אחת.",
+  "Decide the number before you go out": "החליטו על המספר לפני שאתם יוצאים",
+  "Pick how many you'll have before you leave, say it out loud to someone, and stand where the smokers aren't. Deciding in the moment is the part that fails.":
+    "בחרו כמה תעשנו לפני שאתם יוצאים, אמרו את המספר בקול למישהו, ועמדו במקום שבו לא מעשנים. ההחלטה ברגע עצמו היא החלק שנכשל.",
+  "Bank the ones you win": "אספו את הפעמים שניצחתם",
+  "You've ridden urges out before, and they passed. Keep count of them on purpose — the proof that they pass is most of what gets you through the next one.":
+    "כבר עברתם דחפים והם חלפו. ספרו אותם בכוונה — ההוכחה שהם חולפים היא רוב מה שיעביר אתכם את הבא בתור.",
+
+  // The sentence under a recommendation, which is the whole reason it is
+  // there. Several open with a number or a trigger name, so they carry a
+  // right-to-left mark to stop that first glyph jumping to the far end.
+  "{n} of the cigarettes you logged in the last two weeks came with {trigger}.":
+    "\u200f{n} מהסיגריות שתיעדתם בשבועיים האחרונים הגיעו עם {trigger}.",
+  "{trigger} is behind more of your cigarettes than it was a fortnight ago.":
+    "\u200f{trigger} עומד מאחורי יותר מהסיגריות שלכם מאשר לפני שבועיים.",
+  "Most of your cigarettes lately are {part} ones.":
+    "רוב הסיגריות שלכם לאחרונה הן סיגריות של {part}.",
+  "Your first cigarette of the day is usually around {hour}.":
+    "הסיגריה הראשונה שלכם ביום היא בדרך כלל בסביבות {hour}.",
+  "Most of the urges you sat with lately ended in a cigarette anyway.":
+    "רוב הדחפים שישבתם איתם לאחרונה הסתיימו בכל זאת בסיגריה.",
+  "You rode out {held} of the {faced} urges you sat with in the last two weeks.":
+    "עמדתם ב־{held} מתוך {faced} הדחפים שישבתם איתם בשבועיים האחרונים.",
+  "You were over your daily target on {n} of the last {days} days.":
+    "הייתם מעל היעד היומי ב־{n} מתוך {days} הימים האחרונים.",
+  "That is about {n} cigarettes you did not smoke in the last two weeks.":
+    "זה בערך {n} סיגריות שלא עישנתם בשבועיים האחרונים.",
+  "You marked this one as something that works for you.": "סימנתם שזה עובד בשבילכם.",
+  morning: "בוקר",
+  afternoon: "צהריים",
+  evening: "ערב",
+  night: "לילה",
+
+  // The tips screen around the recommendations.
+  "For you right now": "בשבילכם עכשיו",
+  "These are in the order they were written. Once you've logged a few days, this page leads with the ones that match your own pattern.":
+    "אלה מופיעים בסדר שבו נכתבו. אחרי שתתעדו כמה ימים, הדף הזה יפתח בטיפים שמתאימים לדפוס שלכם.",
+  "Everything else": "כל השאר",
+  "This helps me": "זה עוזר לי",
+  "Not for me": "לא בשבילי",
+
+  // The habits screen, once a swap is something you start and measure.
+  "What you're trying": "מה אתם מנסים",
+  "Worth trying next": "שווה לנסות עכשיו",
+  "Every swap": "כל התחליפים",
+  "Tag a few cigarettes with what set them off, and this page will suggest the swap worth trying first — then measure it for you.":
+    "תייגו כמה סיגריות עם מה שהצית אותן, והדף הזה יציע את התחליף ששווה לנסות ראשון — ואז ימדוד אותו בשבילכם.",
+  "a day with this cue, before and since": "ביום עם הרמז הזה, לפני ומאז",
+  "{n} of {days} days clear": "\u200f{n} מתוך {days} ימים נקיים",
+  "Day {n} of {total}": "יום {n} מתוך {total}",
+  "Stop this one": "לעצור את זה",
+  "{trigger}: about {n} a day lately.": "\u200f{trigger}: בערך {n} ביום לאחרונה.",
+  "{trigger}: about {n} a day lately, most often around {hour}.":
+    "\u200f{trigger}: בערך {n} ביום לאחרונה, לרוב סביב {hour}.",
+  "Try this for a week": "לנסות את זה לשבוע",
+  "Too early to call. Check back in a day or two.": "מוקדם מדי להכריע. חזרו לבדוק בעוד יום־יומיים.",
+  "Down {pct}% on this cue since you started.": "ירידה של {pct}% ברמז הזה מאז שהתחלתם.",
+  "Up on this cue since you started — another swap may fit better.":
+    "עלייה ברמז הזה מאז שהתחלתם — אולי תחליף אחר יתאים יותר.",
+  "No real change on this cue yet. Give it the full week.":
+    "עדיין אין שינוי אמיתי ברמז הזה. תנו לזה את כל השבוע.",
+  // ── Insights, once the page leads with a direction rather than a wall ──
+  "The last two weeks": "השבועיים האחרונים",
+  "a day, on average.": "ביום, בממוצע.",
+  "Too early to compare fortnights — this is your first.":
+    "מוקדם מדי להשוות שבועיים — אלה השבועיים הראשונים שלכם.",
+  "Down from {n} a day the fortnight before.": "ירידה מ־{n} ביום בשבועיים שלפני.",
+  "Up from {n} a day the fortnight before.": "עלייה מ־{n} ביום בשבועיים שלפני.",
+  "About the same as the fortnight before.": "בערך כמו בשבועיים שלפני.",
+  "Urges you sat with": "דחפים שישבתם איתם",
+  "Nothing recorded yet. Next time one comes, use \u201cI want one right now\u201d on the Today tab — what happens either way gets counted here.":
+    "עדיין לא תועד כלום. בפעם הבאה שיגיע דחף, השתמשו ב\u201eבא לי עכשיו\u201d בטאב היום — מה שיקרה, לכאן או לכאן, ייספר כאן.",
+  "{pct}% ridden out": "\u200f{pct}% שעברו בלי סיגריה",
+  "Your heaviest stretch is {from}–{to}, which carries {pct}% of everything you've logged. Plan a replacement for that window — a walk, water, a piece of gum.":
+    "הקטע העמוס ביותר שלכם הוא {from}–{to}, ובו {pct}% מכל מה שתיעדתם. תכננו תחליף לחלון הזה — הליכה, מים, מסטיק.",
+  "{day} is your heaviest day of the week, at about {n} a day.":
+    "\u200f{day} הוא היום העמוס בשבוע שלכם, עם בערך {n} ביום.",
+  "up on the fortnight before": "עלייה ביחס לשבועיים שלפני",
+  "down on the fortnight before": "ירידה ביחס לשבועיים שלפני",
+  Streaks: "רצפים",
+  "Smoke-free run": "רצף בלי עישון",
+  "Longest run": "הרצף הארוך ביותר",
+  "Days at or under target": "ימים בתוך היעד",
 };

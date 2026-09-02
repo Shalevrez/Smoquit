@@ -466,3 +466,156 @@ export const authPrivacyStyle = {
   marginTop: 18,
   textAlign: "center",
 };
+
+// ── The coached tips, and the habit experiments ──────────────────────────
+//
+// The recommendations sit in cards and the rest of the tips stay in the
+// plain numbered list they were always in. That contrast is the whole
+// design: a card says "this one is about you", and if everything were a
+// card nothing would be.
+//
+// borderInlineStart rather than borderLeft, so the accent stripe stays on
+// the side the reading starts from when the page flips to Hebrew.
+export const forYouCardStyle = {
+  background: colors.paper,
+  border: `1px solid ${colors.line}`,
+  borderInlineStart: `3px solid ${colors.ember}`,
+  borderRadius: 12,
+  padding: "14px 16px",
+  marginBottom: 10,
+};
+export const reasonLineStyle = {
+  fontSize: 12.5,
+  color: colors.ember,
+  lineHeight: 1.5,
+  marginTop: 8,
+  fontWeight: 600,
+};
+export const noteStyle = {
+  fontSize: 13,
+  color: colors.ash,
+  lineHeight: 1.6,
+  marginTop: 0,
+};
+export const verdictRowStyle = {
+  display: "flex",
+  gap: 8,
+  marginTop: 12,
+};
+
+/**
+ * One of the two "did this help?" buttons. Chosen is filled, unchosen is an
+ * outline — and the chosen one keeps looking like a button rather than
+ * becoming a label, because pressing it again is how somebody takes it back.
+ */
+export function verdictButtonStyle(chosen, good) {
+  const tone = good ? colors.moss : colors.ash;
+  return {
+    flex: 1,
+    padding: "8px 10px",
+    borderRadius: 8,
+    fontSize: 12.5,
+    fontWeight: 700,
+    cursor: "pointer",
+    border: `1px solid ${chosen ? tone : colors.line}`,
+    background: chosen ? (good ? colors.mossSoft : colors.breath) : "none",
+    color: chosen ? tone : colors.ash,
+  };
+}
+export const experimentCardStyle = {
+  background: colors.paper,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 12,
+  padding: "16px",
+  marginBottom: 10,
+};
+export const beforeAfterStyle = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: 8,
+  fontFamily: "Georgia, serif",
+  fontSize: 22,
+  fontWeight: 700,
+  color: colors.ink,
+  direction: "ltr",
+  marginTop: 10,
+};
+export const smallPrintStyle = {
+  fontSize: 12,
+  color: colors.ash,
+  lineHeight: 1.5,
+  marginTop: 8,
+};
+export const startButtonStyle = {
+  marginTop: 12,
+  width: "100%",
+  padding: "11px",
+  borderRadius: 10,
+  border: `1px solid ${colors.moss}`,
+  background: colors.mossSoft,
+  color: colors.moss,
+  fontSize: 14,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+export const stopButtonStyle = {
+  marginTop: 12,
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: `1px solid ${colors.line}`,
+  background: "none",
+  color: colors.ash,
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+// ── Insights ─────────────────────────────────────────────────────────────
+//
+// The page opens with one number rather than a grid of them, because the
+// question somebody comes here with is "is this getting better or not" and
+// a wall of five equal-weight stats answers it last.
+export const headlineCardStyle = {
+  background: colors.breath,
+  border: `1px solid ${colors.line}`,
+  borderRadius: 14,
+  padding: "18px 20px",
+  marginBottom: 14,
+};
+export const headlineNumberStyle = {
+  fontFamily: "Georgia, serif",
+  fontSize: 40,
+  fontWeight: 700,
+  color: colors.ink,
+  lineHeight: 1.1,
+  // Numerals read left-to-right in Hebrew too, and this one is large enough
+  // that the bidi algorithm getting it wrong would be unmissable.
+  direction: "ltr",
+};
+export const headlineCaptionStyle = {
+  fontSize: 13,
+  color: colors.smoke,
+  lineHeight: 1.5,
+  marginTop: 6,
+};
+export const eyebrowStyle = {
+  fontSize: 11,
+  textTransform: "uppercase",
+  letterSpacing: 1,
+  color: colors.ash,
+  marginBottom: 8,
+};
+
+/**
+ * The little arrow beside a trigger. Vertical on purpose: an arrow that
+ * points sideways has to be mirrored in Hebrew and is a standing invitation
+ * to forget to, whereas up and down mean the same thing in both directions.
+ */
+export function trendMarkStyle(rising) {
+  return {
+    fontSize: 12,
+    fontWeight: 700,
+    color: rising ? colors.ember : colors.moss,
+    marginInlineStart: 6,
+  };
+}

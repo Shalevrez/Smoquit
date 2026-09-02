@@ -25,12 +25,29 @@
 //  lose, so those do take the newest write.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { mergeFeedback } from "../domain/coach.js";
+import { mergeCravings } from "../domain/cravings.js";
 import { mergeLogs } from "../domain/entries.js";
+import { mergeExperiments } from "../domain/experiments.js";
 import { readCache, writeCache } from "./cache.js";
 import { currentUserId, loadRow, saveKey } from "./storage.js";
 
-/** Rows whose value is a log of entries, and so must be merged, not replaced. */
-const MERGED_KEYS = new Set(["logs"]);
+/**
+ * Rows that accumulate, and how to combine two versions of one.
+ *
+ * A row not named here is a single small object with no history to lose —
+ * the goal, the settings, the migration meta — and takes the newest write.
+ * Everything listed is something a person added to over time on whichever
+ * device was in their hand, so replacing it wholesale loses whatever the
+ * other one recorded while it was offline. Each merge lives beside the data
+ * it understands; this is only the register of which key gets which.
+ */
+const MERGERS = {
+  logs: mergeLogs,
+  cravings: mergeCravings,
+  habits: mergeExperiments,
+  tipFeedback: mergeFeedback,
+};
 
 let userId = null;
 const pending = new Map(); // key -> the value still owed to the server
@@ -76,7 +93,8 @@ export async function refresh(key, fallback = null) {
     return { value: remote, ok: true };
   }
 
-  const merged = MERGED_KEYS.has(key) ? mergeLogs(local.value, remote) : local.value;
+  const merge = MERGERS[key];
+  const merged = merge ? merge(local.value, remote) : local.value;
   store(key, merged, true);
   return { value: merged, ok: true };
 }
