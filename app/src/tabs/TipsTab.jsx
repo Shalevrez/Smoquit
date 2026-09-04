@@ -18,7 +18,7 @@
 import React from "react";
 
 import { pickForYou, rankTips } from "../domain/coach.js";
-import { sqT, useSqLang } from "../i18n/index.js";
+import { sqPhrase, sqT, useSqLang } from "../i18n/index.js";
 import { colors } from "../theme/colors.js";
 import {
   disclaimerStyle,
@@ -40,15 +40,6 @@ import {
  * whatever the app is being read in, so it is translated on the way to the
  * screen here, exactly as it is everywhere else it is shown.
  */
-function reasonText(reason) {
-  if (!reason) return null;
-  const params = { ...reason.params };
-  for (const name of ["trigger", "part"]) {
-    if (name in params) params[name] = sqT(params[name]);
-  }
-  return sqT(reason.key, params);
-}
-
 export function TipsTab({ profile, feedback, onFeedback }) {
   const lang = useSqLang();
   // Depends on the language because a reason can carry a formatted hour,
@@ -125,7 +116,7 @@ function TipCard({ entry, onFeedback }) {
       <div style={{ fontSize: 13.5, color: colors.smoke, lineHeight: 1.55 }}>
         {sqT(entry.tip.d)}
       </div>
-      <div style={reasonLineStyle}>{reasonText(entry.reason)}</div>
+      <div style={reasonLineStyle}>{sqPhrase(entry.reason)}</div>
       <Verdict entry={entry} onFeedback={onFeedback} />
     </div>
   );

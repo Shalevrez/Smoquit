@@ -57,6 +57,28 @@ export function sqT(key, params) {
   if (params) for (const n in params) text = text.split("{" + n + "}").join(String(params[n]));
   return text;
 }
+/**
+ * A {key, params} pair from the domain layer, turned into a sentence.
+ *
+ * domain/coach.js and domain/alerts.js both return facts rather than
+ * phrases — numbers and names, never sentences — which is what keeps them
+ * testable without a locale and runnable somewhere that has no SQ_LANG. The
+ * cost is that some of the params are themselves names the app owns, like a
+ * trigger or a part of the day, and those have to be translated on the way
+ * out or an English word lands in the middle of a Hebrew sentence.
+ *
+ * It lives here rather than in either screen because two copies of this loop
+ * is exactly how one of them ends up missing a param name.
+ */
+export function sqPhrase(phrase) {
+  if (!phrase) return null;
+  const params = { ...phrase.params };
+  for (const name of ["trigger", "part"]) {
+    if (name in params) params[name] = sqT(params[name]);
+  }
+  return sqT(phrase.key, params);
+}
+
 export function sqApplyLangToDocument() {
   try {
     window.SMOQUIT_LANG = SQ_LANG;

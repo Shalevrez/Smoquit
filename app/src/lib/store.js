@@ -25,6 +25,7 @@
 //  lose, so those do take the newest write.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { mergeAlerts } from "../domain/alerts.js";
 import { mergeFeedback } from "../domain/coach.js";
 import { mergeCravings } from "../domain/cravings.js";
 import { mergeLogs } from "../domain/entries.js";
@@ -47,6 +48,11 @@ const MERGERS = {
   cravings: mergeCravings,
   habits: mergeExperiments,
   tipFeedback: mergeFeedback,
+  // Note this one runs the opposite way round to the line above it. A tip
+  // verdict is an opinion, so the newer statement wins; a record of an alert
+  // having been shown is evidence, so the EARLIER one does. mergeAlerts says
+  // why at more length.
+  alerts: mergeAlerts,
 };
 
 let userId = null;

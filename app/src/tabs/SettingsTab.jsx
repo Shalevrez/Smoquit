@@ -2,6 +2,8 @@
 //  Language, where you are, what you smoke, and what it costs.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { alertPrefs, PREF_LABELS } from "../domain/alerts.js";
+import { formatHour } from "../domain/insights.js";
 import { COUNTRIES, countryFor, detectCountry } from "../data/countries.js";
 import { PRODUCT_TYPE_LABELS } from "../data/products.js";
 import { SQ_LANG, SQ_LANG_OPTIONS, sqSetLang, sqT } from "../i18n/index.js";
@@ -9,14 +11,23 @@ import { deleteAllData } from "../lib/storage.js";
 import { colors } from "../theme/colors.js";
 import {
   disclaimerStyle,
+  eyebrowStyle,
   fieldLabelStyle,
   hintStyle,
   inputStyle,
   reasonCardStyle,
 } from "../theme/styles.js";
+const NUDGES = Object.entries(PREF_LABELS);
+
+const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+
 export function SettingsTab({ settings, onChange }) {
   if (!settings) return null;
-  const country = countryFor(settings.country),
+  // Defaults are filled in on the way out rather than written on the way in,
+  // so an account made before this feature existed needs no migration.
+  const prefs = alertPrefs(settings),
+    setPref = (changes) => onChange({ alerts: { ...prefs, ...changes } }),
+    country = countryFor(settings.country),
     detectedCountry = detectCountry(),
     // Changing country resets the product and its price to that country's
     // most common pack; keeping the old brand's price would be nonsense in a
@@ -196,6 +207,86 @@ export function SettingsTab({ settings, onChange }) {
           "Product prices are rough 2026 estimates to get you started, not live retail prices — always trust the value you enter yourself.",
         )}
       </div>
+      <div
+        style={{
+          marginTop: 26,
+          borderTop: `1px solid ${colors.line}`,
+          paddingTop: 18,
+        }}
+      >
+        <div style={eyebrowStyle}>{sqT("Nudges")}</div>
+        {/*
+          Said plainly, because it is the whole limit of what this does. A
+          settings screen that implies a phone notification when nothing is
+          sent anywhere is worse than no settings screen — the first time
+          somebody's phone stays quiet at eight, every other switch here
+          stops being believed.
+        */}
+        <p style={{ ...hintStyle, marginTop: 0, marginBottom: 12 }}>
+          {sqT(
+            "These appear at the top of the app while you have it open. Nothing is sent to your phone.",
+          )}
+        </p>
+
+        {NUDGES.map(([id, label]) => (
+          <label
+            key={id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontSize: 14,
+              color: colors.smoke,
+              padding: "7px 0",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={prefs[id]}
+              onChange={(event) => setPref({ [id]: event.target.checked })}
+              style={{ width: 17, height: 17, accentColor: colors.ember, flexShrink: 0 }}
+            />
+            {sqT(label)}
+          </label>
+        ))}
+
+        <label
+          style={{
+            ...fieldLabelStyle,
+            marginTop: 14,
+            opacity: prefs.reminder ? 1 : 0.5,
+          }}
+        >
+          {sqT("Remind me at")}
+          <select
+            value={prefs.reminderHour}
+            disabled={!prefs.reminder}
+            onChange={(event) => setPref({ reminderHour: Number(event.target.value) })}
+            style={{
+              ...inputStyle,
+              appearance: "auto",
+            }}
+          >
+            {/*
+              Through formatHour, so the picker and every sentence in the app
+              call the same hour by the same name — a twelve-hour clock in
+              English, a twenty-four hour one in Hebrew.
+            */}
+            {HOURS.map((hour) => (
+              <option key={hour} value={hour}>
+                {formatHour(hour)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div style={hintStyle}>
+          {sqT(
+            "Only on a day you have not answered for yet. Marking a day smoke-free counts as answering.",
+          )}
+        </div>
+      </div>
+
       <div
         style={{
           marginTop: 26,

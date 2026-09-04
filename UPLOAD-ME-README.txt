@@ -284,6 +284,52 @@ If nothing is chosen and the sheet is simply closed, nothing is recorded.
 We do not know what happened, and guessing would put invented wins into a
 number whose whole value is that it is true.
 
+WHEN THE APP SPEAKS FIRST
+-------------------------
+The app knows when your hardest stretch of the day is coming, that you have
+not answered for today yet, and that you are four days into a clean run. It
+used to say none of it unless you went looking. Now one card can appear at
+the top of the screen, above whichever tab you are on.
+
+Four things it will say, each with its own switch under Settings -> Nudges:
+
+  * you have gone over the daily target you set yourself,
+  * a streak, a personal best, or another pack's worth of money saved,
+  * your heaviest three hours are about an hour away,
+  * nothing has been logged today, at an hour you choose (8pm by default).
+
+Only ever one at a time, worst first. A stack of these is a notification
+centre, and a notification centre is somewhere people go to dismiss things.
+
+IT IS ALL INSIDE THE APP. Nothing is sent to your phone, no permission is
+asked for, and nothing arrives while the app is closed. Real push
+notifications need a service worker, a manifest, and something server-side
+to do the sending at the right moment in the right timezone — none of which
+exists yet. The engine that decides WHAT to say (app/src/domain/alerts.js)
+was written so that a server could run the identical file later: it takes
+the time as an argument, touches no browser API, and returns facts rather
+than sentences.
+
+Two rules it follows that are worth knowing, because both were easy to get
+wrong and both would have been the kind of bug that gets the whole feature
+switched off:
+
+  * A day you marked "I haven't smoked today" is an ANSWER, not an empty
+    day. It is stored as an empty list rather than as a missing one, and the
+    evening reminder can tell the difference. Nagging somebody on their best
+    day would be the worst thing this feature could do.
+
+  * A milestone is only ever offered to somebody with something in their
+    log. Days nobody opened the app count as smoke-free days on purpose --
+    that is what lets a perfect day count without being announced -- but it
+    means an account that signed up and never came back has a "run" going
+    that nothing can vouch for. It is not congratulated for it.
+
+What has already been said is remembered in a fifth row, under the key
+`alerts`, so the same thing is not said twice and not on two devices. Again
+no schema change: user_data is key/value, so a new key is a new row.
+
+
 WORKING WITHOUT A SIGNAL
 ------------------------
 The app keeps a copy of your data in the browser, so it opens instantly and

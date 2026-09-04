@@ -35,6 +35,15 @@ const DYNAMIC = [
   // Both reach sqT() through a variable, from domain/coach.js.
   ["domain/coach.js", "REASONS", "values"],
   ["domain/coach.js", "PART_WORDS", null],
+  // The alerts, likewise. Note MILESTONES-style tables of ids are
+  // deliberately NOT listed: anything named here is demanded in Hebrew, and
+  // an id translated in he.js is an entry nobody will ever see and nobody
+  // can tell is dead.
+  ["domain/alerts.js", "TITLES", "values"],
+  ["domain/alerts.js", "BODIES", "values"],
+  ["domain/alerts.js", "ACTIONS", "values"],
+  ["domain/alerts.js", "KIND_LABELS", "values"],
+  ["domain/alerts.js", "PREF_LABELS", "values"],
   ["data/breathing.js", "BREATH_PHASES", ["label"]],
   ["data/countries.js", "COUNTRIES", ["name"]],
   ["data/countries.js", "FALLBACK_COUNTRY", ["name"]],

@@ -776,3 +776,155 @@ test("the insights page reads right-to-left in Hebrew", async ({ page }) => {
   await expect(page.getByText(/08:00–10:00/)).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+//  The nudges.
+//
+//  The frozen clock is midday and the reminder defaults to eight in the
+//  evening, which is why the fifty-odd tests above see no banner and did
+//  not have to change. The first test here pins that down, because the day
+//  it stops being true it would surface as a wall of unrelated failures in
+//  tests that suddenly have a card in front of the thing they click.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Everything off but the evening reminder, at an hour a test can reach. */
+const ONLY_REMINDER = {
+  reminderHour: 13,
+  milestone: false,
+  risk: false,
+  target: false,
+};
+
+test("nothing is said at midday to somebody who has already logged", async ({ page }) => {
+  await open(page);
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
+});
+
+test("going over the daily target says so, once, and does not scold", async ({ page }) => {
+  // The fixture is two of a target of eight, so take the target down to one
+  // rather than logging six cigarettes to get there.
+  const { written } = await open(page, { data: { goal: { ...GOAL, target: 1 } } });
+
+  const banner = page.locator('[role="status"]');
+  await expect(banner).toBeVisible();
+  await expect(banner).toContainText("Over today's target");
+  await expect(banner).toContainText("1 over your 1 a day");
+  await expect(banner).toContainText("The rest of the evening is still yours");
+  // One at a time, always.
+  await expect(banner).toHaveCount(1);
+
+  // It is written down after a few seconds on screen, so a reload is quiet.
+  await written("alerts").toMatchObject({ seen: { "target:2026-08-31": { day: "2026-08-31" } } });
+});
+
+test("dismissing a nudge writes it down, and it does not come back", async ({ page }) => {
+  const { written } = await open(page, { data: { goal: { ...GOAL, target: 1 } } });
+
+  const banner = page.locator('[role="status"]');
+  await expect(banner).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss" }).click();
+  await expect(banner).toHaveCount(0);
+
+  await written("alerts").toMatchObject({ seen: { "target:2026-08-31": { day: "2026-08-31" } } });
+});
+
+test("a nudge already said is not said again", async ({ page }) => {
+  await open(page, {
+    data: {
+      goal: { ...GOAL, target: 1 },
+      alerts: { v: 1, seen: { "target:2026-08-31": { at: 1, day: "2026-08-31" } } },
+    },
+  });
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
+});
+
+test("the action on a nudge takes you to the tab it names", async ({ page }) => {
+  await open(page, { data: { goal: { ...GOAL, target: 1 } } });
+
+  await page.getByRole("button", { name: "Open Today" }).click();
+  await expect(page.getByText("Cigarettes today")).toBeVisible();
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
+});
+
+test("the evening reminder waits for the hour, and only for an unanswered day", async ({
+  page,
+}) => {
+  // No log row at all for today: nobody has answered for it. The clock is
+  // pushed past the chosen hour rather than the default, so the test does
+  // not sit through eight hours of fake time.
+  const { written } = await open(page, {
+    controlClock: true,
+    data: {
+      logs: { "2026-08-25": LOGS["2026-08-25"], "2026-08-26": LOGS["2026-08-26"] },
+      // Only the reminder, so this test is about the reminder. Days with no
+      // key are smoke-free days, so this account has a run going and would
+      // otherwise be congratulated first — correctly, but not here.
+      settings: { ...SETTINGS, alerts: ONLY_REMINDER },
+    },
+  });
+
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
+
+  // Up to 12:59, then one more tick to land exactly on the hour. Advancing
+  // the whole hour in one call would run the "counts as seen" timer too —
+  // it is four seconds and this would be sixty minutes — and the banner
+  // would appear and mark itself read inside the same call.
+  await page.clock.runFor(59 * 60 * 1000);
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
+  await page.clock.runFor(60 * 1000);
+
+  const banner = page.locator('[role="status"]');
+  await expect(banner).toContainText("Nothing logged today");
+  await expect(banner).toContainText("Two taps and the day is on the record");
+
+  // A few seconds on screen is what makes it said, so it is not burned by
+  // being glimpsed and not repeated all evening either.
+  await page.clock.runFor(5000);
+  await written("alerts").toMatchObject({ seen: { "reminder:2026-08-31": {} } });
+  await expect(banner).toHaveCount(0);
+});
+
+test("a day marked smoke-free counts as answered, and is not nagged", async ({ page }) => {
+  // The distinction the whole reminder rule turns on: an empty array is
+  // somebody pressing "I haven't smoked today", which is the best day this
+  // app can record — not a day nobody answered for.
+  await open(page, {
+    controlClock: true,
+    data: {
+      logs: { "2026-08-25": LOGS["2026-08-25"], "2026-08-31": [] },
+      settings: { ...SETTINGS, alerts: ONLY_REMINDER },
+    },
+  });
+
+  await page.clock.runFor(60 * 60 * 1000);
+  await expect(page.locator('[role="status"]')).toHaveCount(0);
+});
+
+test("the nudge switches are on the settings page and are saved", async ({ page }) => {
+  const { written } = await open(page);
+  await tab(page, "Settings");
+
+  await expect(page.getByText("Nudges")).toBeVisible();
+  await expect(page.getByText(/Nothing is sent to your phone/)).toBeVisible();
+
+  await page.getByLabel("When I go over my daily target").uncheck();
+  await written("settings").toMatchObject({ alerts: { target: false, reminder: true } });
+
+  await page.getByLabel("Remind me at").selectOption("7");
+  await written("settings").toMatchObject({ alerts: { reminderHour: 7 } });
+});
+
+test("a nudge reads right-to-left in Hebrew", async ({ page }) => {
+  await open(page, {
+    lang: "he",
+    data: { goal: { ...GOAL, target: 1 }, settings: { ...SETTINGS, lang: "he" } },
+  });
+
+  const banner = page.locator('[role="status"]');
+  await expect(banner).toContainText("מעל היעד של היום");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  // The accent stripe is on the side the reading starts from, which in
+  // Hebrew is the right — borderInlineStart, never borderLeft.
+  await expect(banner).toHaveCSS("border-left-width", "1px");
+  await expect(banner).toHaveCSS("border-right-width", "3px");
+});

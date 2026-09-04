@@ -14,14 +14,16 @@
 
 import React from "react";
 
+import { AlertBanner } from "./components/AlertBanner.jsx";
 import { Header } from "./components/Header.jsx";
 import { countryFor, detectCountry } from "./data/countries.js";
 import { TABS } from "./data/tabs.js";
 import { SQ_LANG, sqIsLang, sqSetLang, sqT, useSqLang } from "./i18n/index.js";
+import { dueAlerts, markSeen, pickAlert, sweepSeen } from "./domain/alerts.js";
 import { countOn, entriesOn, markDeleted } from "./domain/entries.js";
 import { buildProfile } from "./domain/profile.js";
 import { startExperiment, stopExperiment } from "./domain/experiments.js";
-import { todayKey } from "./lib/dates.js";
+import { dayKey as dayKeyOf } from "./lib/dates.js";
 import { migrate } from "./lib/migrate.js";
 import * as store from "./lib/store.js";
 import { addCraving, heldOn } from "./domain/cravings.js";
@@ -37,15 +39,28 @@ import { TodayTab } from "./tabs/TodayTab.jsx";
 import { colors } from "./theme/colors.js";
 import { navStyle, pageStyle, shellStyle, tabStyle } from "./theme/styles.js";
 
-/** Today's key, recomputed whenever the day actually turns over. */
-function useTodayKey() {
-  const [key, setKey] = React.useState(todayKey);
+/**
+ * Now, to the minute.
+ *
+ * This used to be useTodayKey(), watching only for midnight. It now hands
+ * out the minute itself, because the alerts want to know that eight in the
+ * evening has arrived and the day key still falls straight out of it —
+ * flooring to the minute never crosses a day boundary the wrong way. One
+ * set of listeners rather than two.
+ *
+ * A minute is fine: nothing here needs to notice midnight to the second,
+ * and checking on wake matters more than checking often, because a
+ * backgrounded tab does not get its timers. That is also why nothing
+ * downstream may test for an exact moment — see the reminder rule in
+ * domain/alerts.js, which asks whether the hour has passed rather than
+ * whether it is now.
+ */
+function useMinute() {
+  const floor = () => Math.floor(Date.now() / 60000) * 60000;
+  const [ms, setMs] = React.useState(floor);
 
   React.useEffect(() => {
-    const check = () => setKey((prev) => (todayKey() === prev ? prev : todayKey()));
-    // A minute is fine: nothing here needs to notice midnight to the second,
-    // and checking on wake matters more than checking often, because a
-    // backgrounded tab does not get its timers.
+    const check = () => setMs((prev) => (floor() === prev ? prev : floor()));
     const timer = setInterval(check, 60000);
     document.addEventListener("visibilitychange", check);
     window.addEventListener("focus", check);
@@ -56,8 +71,17 @@ function useTodayKey() {
     };
   }, []);
 
-  return key;
+  return ms;
 }
+
+/**
+ * How long an alert has to be on screen before it counts as said.
+ *
+ * Marking it on render would burn one glimpsed for an instant before the
+ * phone locked; never marking it would leave a milestone sitting there until
+ * somebody found the ×. A few seconds is "you saw this".
+ */
+const SEEN_AFTER_MS = 4000;
 
 export function AppShell({ user }) {
   useSqLang();
@@ -74,6 +98,10 @@ export function AppShell({ user }) {
   // beside the log they are judged against.
   const [tipFeedback, setTipFeedback] = React.useState({});
   const [habits, setHabits] = React.useState({});
+  // What the app has already said, so it does not say it twice. Its own row
+  // rather than a corner of settings, because it accumulates and therefore
+  // needs a merge rule — see MERGERS in lib/store.js.
+  const [alertsRow, setAlertsRow] = React.useState(null);
   const [ridingOut, setRidingOut] = React.useState(false);
   // Which sheet is up, if any: the trigger picker, then the time picker.
   const [askingTrigger, setAskingTrigger] = React.useState(null);
@@ -100,6 +128,7 @@ export function AppShell({ user }) {
         setMeta(store.cached("meta", null));
         setTipFeedback(store.cached("tipFeedback", {}));
         setHabits(store.cached("habits", {}));
+        setAlertsRow(store.cached("alerts", null));
         setReady(true);
       }
 
@@ -111,6 +140,7 @@ export function AppShell({ user }) {
         freshCravings,
         freshFeedback,
         freshHabits,
+        freshAlerts,
       ] = await Promise.all([
         store.refresh("logs", {}),
         store.refresh("goal", null),
@@ -119,6 +149,7 @@ export function AppShell({ user }) {
         store.refresh("cravings", {}),
         store.refresh("tipFeedback", {}),
         store.refresh("habits", {}),
+        store.refresh("alerts", null),
       ]);
 
       // Entries used to be filed by UTC date; put them under the local day
@@ -130,6 +161,13 @@ export function AppShell({ user }) {
       setCravings(freshCravings.value ?? {});
       setTipFeedback(freshFeedback.value ?? {});
       setHabits(freshHabits.value ?? {});
+
+      // Day-keyed records past their month are dead weight; milestones are
+      // kept forever and sweepSeen knows the difference. Written back only
+      // when something actually went, the same way migrate() is handled.
+      const swept = sweepSeen(freshAlerts.value, Date.now());
+      setAlertsRow(swept.row);
+      if (swept.dropped > 0) store.write("alerts", swept.row);
 
       let saved = freshSettings.value;
       if (!saved) {
@@ -170,7 +208,8 @@ export function AppShell({ user }) {
   // Recomputed on a tick rather than only on render: a phone left open on
   // this screen overnight would otherwise keep filing tomorrow's cigarettes
   // under yesterday, which is the same bug the local day key just fixed.
-  const dayKey = useTodayKey();
+  const nowTick = useMinute();
+  const dayKey = React.useMemo(() => dayKeyOf(nowTick), [nowTick]);
   const todayLogs = entriesOn(logs, dayKey);
 
   // Every write below rewrites the whole logs blob, because that is what a
@@ -283,6 +322,55 @@ export function AppShell({ user }) {
     [logs, cravings, goal, settings, meta],
   );
 
+  // The one thing worth saying right now, if there is one.
+  //
+  // Note `logs` in the deps, and leave it there. That is not belt and
+  // braces — it is the entire mechanism behind the "you have gone over
+  // today's target" alert, which has no schedule and no timer: addLog()
+  // commits, logs changes, this recomputes, and the banner is up on the same
+  // render. Nothing imperative fires it, which is also why the identical
+  // rule can be run later by something that is not a browser.
+  const alert = React.useMemo(
+    () =>
+      pickAlert(
+        dueAlerts({
+          profile,
+          logs,
+          cravings,
+          goal,
+          settings,
+          seen: alertsRow?.seen,
+          now: nowTick,
+        }),
+      ),
+    [profile, logs, cravings, goal, settings, alertsRow, nowTick],
+  );
+
+  const markAlertSeen = React.useCallback((shown) => {
+    setAlertsRow((prev) => {
+      const next = markSeen(prev, shown, Date.now());
+      // markSeen hands back the same object when there is nothing new to
+      // record. Without that check this would write to the database on every
+      // tick for as long as the app is open.
+      if (next === prev) return prev;
+      store.write("alerts", next);
+      return next;
+    });
+  }, []);
+
+  // Said, rather than merely rendered.
+  //
+  // The memo above rebuilds the alert object on every tick, so this effect
+  // re-runs and the timer restarts each minute. That is survivable only
+  // because SEEN_AFTER_MS is seconds and the tick is a minute — the timer
+  // always finishes first. If either number ever moves towards the other,
+  // key this on alert.id instead.
+  React.useEffect(() => {
+    if (!alert) return undefined;
+    const timer = setTimeout(() => markAlertSeen(alert), SEEN_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [alert, markAlertSeen]);
+
   if (!ready) {
     return (
       <div
@@ -341,6 +429,21 @@ export function AppShell({ user }) {
             </button>
           ))}
         </nav>
+
+        {/*
+          Between the nav and the content, so it is above the fold on every
+          tab rather than only on Today — and below the sticky nav rather
+          than fighting it for the top of the page, which is also where
+          storage-health.js puts its red banner.
+        */}
+        <AlertBanner
+          alert={alert}
+          onAction={(shown) => {
+            setTab(shown.action.tab);
+            markAlertSeen(shown);
+          }}
+          onDismiss={markAlertSeen}
+        />
 
         <main style={{ padding: "22px 20px 40px", animation: "rise .3s ease" }}>
           {tab === "log" && (

@@ -330,4 +330,48 @@ export const SQ_HE = {
   "Smoke-free run": "רצף בלי עישון",
   "Longest run": "הרצף הארוך ביותר",
   "Days at or under target": "ימים בתוך היעד",
+
+  // ── Alerts: the nudges, and the switches that turn them off ──────────
+  Dismiss: "סגירה",
+  Nudges: "תזכורות",
+  "These appear at the top of the app while you have it open. Nothing is sent to your phone.":
+    "אלו מופיעות בראש האפליקציה כל עוד היא פתוחה אצלכם. שום דבר לא נשלח לטלפון שלכם.",
+  "Remind me at": "הזכירו לי בשעה",
+  "Only on a day you have not answered for yet. Marking a day smoke-free counts as answering.":
+    "רק ביום שעדיין לא עניתם עליו. סימון יום כנקי מעישון נחשב תשובה.",
+  Reminder: "תזכורת",
+  "Heads up": "שימו לב",
+  Milestone: "אבן דרך",
+  "Nothing logged today": "לא תועד כלום היום",
+  "Your heavy stretch is coming up": "הקטע העמוס שלכם מתקרב",
+  "Your first one usually lands around now": "הראשונה שלכם נוחתת בדרכ כלל בערך עכשיו",
+  "A full day, nothing logged": "יום שלם, בלי שנרשם כלום",
+  "{days} days smoke-free": "\u200f{days} ימים בלי עישון",
+  "A new personal best": "שיא אישי חדש",
+  "A pack's worth, not smoked": "חבילה שלמה שלא עושנה",
+  "A week inside your target": "שבוע בתוך היעד שלכם",
+  "Over today's target": "מעל היעד של היום",
+  "Two taps and the day is on the record — even if the answer is none.":
+    "שתי נגיעות והיום מתועד — גם אם התשובה היא אף אחת.",
+  "{from}–{to} carries {pct}% of everything you have logged. Line something up now.":
+    "\u200f{from}–{to} נושא {pct}% מכל מה שתיעדתם. תכננו משהו עכשיו.",
+  "Most days your first cigarette is around {hour}, and nothing is logged yet.":
+    "ברוב הימים הסיגריה הראשונה שלכם היא בערך ב־{hour}, ועדיין לא תועד כלום.",
+  "That is the one that takes the most deciding. It is on the record now.":
+    "זה היום שדורש את מרבית ההחלטות. עכשיו הוא מתועד.",
+  "{days} days with nothing logged against them.": "\u200f{days} ימים שלא נרשם עליהם כלום.",
+  "{days} days is the longest run you have recorded.":
+    "\u200f{days} ימים הם הרצף הארוך ביותר שתיעדתם.",
+  "{n} cigarettes you did not smoke — about {currency}{amount} of them.":
+    "\u200f{n} סיגריות שלא עישנתם — שווי כ־{currency}{amount}.",
+  "{days} days running at or under {target} a day.":
+    "\u200f{days} ימים ברצף של {target} או פחות ביום.",
+  "{n} over your {target} a day. The rest of the evening is still yours.":
+    "\u200f{n} מעל ה־{target} היומיות שלכם. שאר הערב עדיין שלכם.",
+  "Open Today": "פתחו את היום",
+  "See the numbers": "לראות את המספרים",
+  "When I go over my daily target": "כשאני עובר/ת את היעד היומי",
+  "Streaks, records and money saved": "רצפים, שיאים וכסף שנחסך",
+  "Before my heaviest stretch of the day": "לפני הקטע העמוס ביום שלי",
+  "If I have not logged anything by evening": "אם לא תיעדתי כלום עד הערב",
 };

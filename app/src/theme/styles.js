@@ -484,6 +484,60 @@ export const forYouCardStyle = {
   padding: "14px 16px",
   marginBottom: 10,
 };
+/**
+ * The alert banner, and the accent that says which kind it is.
+ *
+ * Modelled on forYouCardStyle below, because an alert and a "for you" tip
+ * are the same gesture — the app saying it noticed something specific about
+ * this person — and they should not arrive looking like two different
+ * products. Same borderInlineStart trick, for the same reason: the stripe
+ * stays on the side the reading starts from when the page flips to Hebrew.
+ *
+ * The margin matches main's 20px gutter, so the banner lines up with the
+ * cards below it even though it sits outside main.
+ */
+export const alertBannerStyle = {
+  background: colors.paper,
+  border: `1px solid ${colors.line}`,
+  borderInlineStart: `3px solid ${colors.ash}`,
+  borderRadius: 12,
+  padding: "13px 15px",
+  margin: "14px 20px 0",
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 12,
+  animation: "rise .3s ease",
+};
+
+/**
+ * The colour an alert arrives in.
+ *
+ * A function, like verdictButtonStyle and trendMarkStyle above, because the
+ * tone is data rather than a place. It obeys the palette's one rule
+ * (colors.js): ember is the warning colour and moss is the reassuring one.
+ * Dressing a milestone in ember to make it louder would break the only thing
+ * keeping this app's colour language coherent without a framework.
+ */
+export const alertToneStyle = (tone) =>
+  tone === "good"
+    ? { borderInlineStartColor: colors.moss, background: colors.mossSoft }
+    : tone === "warn"
+      ? { borderInlineStartColor: colors.ember, background: colors.paper }
+      : { borderInlineStartColor: colors.ash, background: colors.breath };
+
+/** The × that dismisses one. Sized for a thumb, not for a mouse. */
+export const alertDismissStyle = {
+  background: "none",
+  border: "none",
+  color: colors.ash,
+  fontSize: 20,
+  lineHeight: 1,
+  padding: "2px 6px",
+  marginTop: -2,
+  cursor: "pointer",
+  flexShrink: 0,
+};
+
 export const reasonLineStyle = {
   fontSize: 12.5,
   color: colors.ember,
