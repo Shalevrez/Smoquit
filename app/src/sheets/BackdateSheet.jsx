@@ -11,7 +11,7 @@
 
 import React from "react";
 import { sqT } from "../i18n/index.js";
-import { formatTime } from "../lib/dates.js";
+import { formatTime } from "../i18n/format.js";
 import { colors } from "../theme/colors.js";
 import {
   chipButtonStyle,

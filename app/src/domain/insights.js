@@ -11,9 +11,11 @@
 //    trackingStartedAt  where the record begins, which decides how many days
 //                       "a day" is being divided by and therefore every
 //                       average, streak and smoke-free count in the app.
-//    formatHour         what to call an hour, which the sentence about a
-//                       peak and the axis under the chart must never
-//                       disagree about.
+//  formatHour used to live here too, and took an import of i18n/index.js
+//  with it — which took React, and a call that touches `document` at import
+//  time. That made this module, and everything importing it, unusable
+//  outside a browser. It is in i18n/format.js now; this file answers only
+//  what is true.
 //
 //  The hard-won bit, kept from the original and still true: the day range
 //  comes from when tracking started, NOT from which days happen to have a
@@ -23,20 +25,7 @@
 //  be zero however well somebody did.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { SQ_LANG } from "../i18n/index.js";
 import { todayKey } from "../lib/dates.js";
-
-/**
- * An hour of the day, written the way the reader expects to see it: a
- * twelve-hour clock in English, a twenty-four hour one in Hebrew. Both the
- * sentence about the peak and the axis under the chart go through here, so
- * they can never disagree about what to call the same hour.
- */
-export function formatHour(hour) {
-  if (SQ_LANG === "he") return `${String(hour).padStart(2, "0")}:00`;
-  const twelve = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  return `${twelve}${hour >= 12 ? "pm" : "am"}`;
-}
 
 /**
  * When this person started tracking. Recorded in meta at migration time;

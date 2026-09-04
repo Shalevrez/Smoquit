@@ -383,12 +383,12 @@ function riskAlerts({ profile, logs, prefs, today, now, already }) {
     },
   ];
 
-  const window = profile.peakWindow;
-  if (window && window.share >= RISK_SHARE && approaching(window.from)) {
+  const stretch = profile.peakWindow;
+  if (stretch && stretch.share >= RISK_SHARE && approaching(stretch.from)) {
     const params = {
-      from: window.from,
-      to: window.to,
-      pct: Math.round(window.share * 100),
+      from: stretch.from,
+      to: stretch.to,
+      pct: Math.round(stretch.share * 100),
     };
     return made({ key: TITLES.risk, params: {} }, { key: BODIES.risk, params });
   }
@@ -401,7 +401,7 @@ function riskAlerts({ profile, logs, prefs, today, now, already }) {
     first != null &&
     first <= EARLY_HOUR &&
     countOn(logs, today) === 0 &&
-    !coversHour(window, first) &&
+    !coversHour(stretch, first) &&
     approaching(first)
   ) {
     return made(
@@ -463,9 +463,9 @@ function reminderAlert({ profile, logs, cravings, prefs, today, now, already }) 
 }
 
 /** Whether a peak window contains an hour, wrapping past midnight. */
-function coversHour(window, hour) {
-  if (!window) return false;
-  const { from, to } = window;
+function coversHour(stretch, hour) {
+  if (!stretch) return false;
+  const { from, to } = stretch;
   return from <= to ? hour >= from && hour <= to : hour >= from || hour <= to;
 }
 

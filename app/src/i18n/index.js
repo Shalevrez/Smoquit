@@ -17,6 +17,7 @@
 
 import React from "react";
 import { SQ_HE } from "./he.js";
+import { translate } from "./translate.js";
 export const SQ_LANG_STORAGE_KEY = "smoquit.lang";
 export const SQ_LANG_OPTIONS = [
   {
@@ -53,9 +54,10 @@ export function sqLocale() {
   return SQ_LANG === "he" ? "he-IL" : [];
 }
 export function sqT(key, params) {
-  let text = (SQ_LANG === "he" && SQ_HE[key]) || key;
-  if (params) for (const n in params) text = text.split("{" + n + "}").join(String(params[n]));
-  return text;
+  // The substitution itself lives in translate.js, because the push sender
+  // has to do exactly the same thing for a language it is told rather than
+  // one it is in.
+  return translate(SQ_LANG === "he" ? SQ_HE : null, key, params);
 }
 /**
  * A {key, params} pair from the domain layer, turned into a sentence.

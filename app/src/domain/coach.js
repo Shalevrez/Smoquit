@@ -29,7 +29,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { TIPS } from "../data/tips.js";
-import { formatHour } from "./insights.js";
+import { formatHour } from "../i18n/format.js";
 
 /** How many tips are worth calling "for you" before it is just the list again. */
 export const FOR_YOU_LIMIT = 3;

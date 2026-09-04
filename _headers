@@ -35,3 +35,29 @@
 
 /storage-health.js
   Cache-Control: public, max-age=0, must-revalidate
+
+# The service worker. Revalidating this one matters more than any of the
+# others: it outlives the page that installed it, so a cached copy is a
+# fixed bug that never reaches the phone it was fixed for. Browsers already
+# bypass the cache for it on most updates, but "already" is not a plan.
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Read once at install time and then rarely, but it decides the name and the
+# icon on somebody's home screen, so a stale one is visible for months.
+/manifest.webmanifest
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Content-hashed like the bundle in spirit — they never change under the
+# same name — but they are hand-placed, so a week is the honest compromise.
+/icon-192.png
+  Cache-Control: public, max-age=604800
+
+/icon-512.png
+  Cache-Control: public, max-age=604800
+
+/icon-maskable-512.png
+  Cache-Control: public, max-age=604800
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=604800

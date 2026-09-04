@@ -525,6 +525,25 @@ export const alertToneStyle = (tone) =>
       ? { borderInlineStartColor: colors.ember, background: colors.paper }
       : { borderInlineStartColor: colors.ash, background: colors.breath };
 
+/**
+ * A hint that is also a button.
+ *
+ * Used where the explanation IS the action — "add it to your home screen
+ * first" is not information, it is the next step — so it reads as a line of
+ * small print and behaves as a link.
+ */
+export const linkNoteStyle = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  margin: 0,
+  textAlign: "start",
+  color: colors.ember,
+  textDecoration: "underline",
+  cursor: "pointer",
+  font: "inherit",
+};
+
 /** The × that dismisses one. Sized for a thumb, not for a mouse. */
 export const alertDismissStyle = {
   background: "none",

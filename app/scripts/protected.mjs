@@ -12,6 +12,21 @@ export const PROTECTED = [
   "_redirects",
   "supabase-schema.sql",
   "UPLOAD-ME-README.txt",
+  // The installable-app files. Same deal as the three scripts above: served
+  // from the root, written by hand, never generated. The icons are here as
+  // much to stop them being deleted as to stop them being rewritten — an
+  // app that loses its icon shows a screenshot of the page instead, and
+  // nobody finds that on a home screen.
+  "sw.js",
+  "manifest.webmanifest",
+  "icon-192.png",
+  "icon-512.png",
+  "icon-maskable-512.png",
+  "apple-touch-icon.png",
+  // Built from app/edge/ but committed and pasted into the Supabase
+  // dashboard by hand, so the build must not touch it either. check-edge.mjs
+  // is what proves it is still in step with its sources.
+  "supabase-send-alerts.js",
 ];
 
 export const FINGERPRINT_FILE = join(tmpdir(), "smoquit-protected-before.json");

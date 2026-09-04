@@ -17,7 +17,7 @@
 //  the hour worth planning around instead of on all of them at once.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { formatHour } from "../domain/insights.js";
+import { formatHour } from "../i18n/format.js";
 import { sqT } from "../i18n/index.js";
 import { colors } from "../theme/colors.js";
 import {

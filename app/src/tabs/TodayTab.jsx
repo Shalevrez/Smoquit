@@ -6,7 +6,7 @@ import React from "react";
 import { countryFor } from "../data/countries.js";
 import { avoidedOn, pricePerCigarette } from "../domain/money.js";
 import { sqT } from "../i18n/index.js";
-import { formatTime } from "../lib/dates.js";
+import { formatTime } from "../i18n/format.js";
 import { colors } from "../theme/colors.js";
 import {
   barFillStyle,

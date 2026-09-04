@@ -334,8 +334,8 @@ export const SQ_HE = {
   // ── Alerts: the nudges, and the switches that turn them off ──────────
   Dismiss: "סגירה",
   Nudges: "תזכורות",
-  "These appear at the top of the app while you have it open. Nothing is sent to your phone.":
-    "אלו מופיעות בראש האפליקציה כל עוד היא פתוחה אצלכם. שום דבר לא נשלח לטלפון שלכם.",
+  "These appear at the top of the app. Turn on notifications below and the timed ones reach your phone too, even when Smoquit is closed.":
+    "אלו מופיעות בראש האפליקציה. הדליקו התראות למטה והמתוזמנות יגיעו גם לטלפון שלכם, גם כש-Smoquit סגורה.",
   "Remind me at": "הזכירו לי בשעה",
   "Only on a day you have not answered for yet. Marking a day smoke-free counts as answering.":
     "רק ביום שעדיין לא עניתם עליו. סימון יום כנקי מעישון נחשב תשובה.",
@@ -374,4 +374,24 @@ export const SQ_HE = {
   "Streaks, records and money saved": "רצפים, שיאים וכסף שנחסך",
   "Before my heaviest stretch of the day": "לפני הקטע העמוס ביום שלי",
   "If I have not logged anything by evening": "אם לא תיעדתי כלום עד הערב",
+
+  // ── Push: the switch, and what to do when it will not go on ──────────
+  "Send them to my phone": "שלחו אותן לטלפון שלי",
+  "Add Smoquit to your Home Screen first — on iPhone that is the only way.":
+    "הוסיפו קודם את Smoquit למסך הבית — באייפון זו הדרך היחידה.",
+  "This browser cannot show notifications.": "הדפדפן הזה לא יודע להציג התראות.",
+  "Notifications are blocked for this site in your browser's settings.":
+    "התראות חסומות לאתר הזה בהגדרות הדפדפן שלכם.",
+  "On iPhone": "באייפון",
+  "Add Smoquit to your Home Screen": "הוסיפו את Smoquit למסך הבית",
+  "Apple only lets a website send notifications once it has been added to the Home Screen. It takes about ten seconds, and afterwards Smoquit opens like any other app — same account, same history.":
+    "אפל מאפשרת לאתר לשלוח התראות רק אחרי שהוא נוסף למסך הבית. זה לוקח כעשר שניות, ומעכשיו Smoquit נפתחת כמו כל אפליקציה אחרת — אותו חשבון, אותה היסטוריה.",
+  "Tap the share button": "הקישו על כפתור השיתוף",
+  "at the bottom of Safari.": "בתחתית ספארי.",
+  'Scroll down and choose "Add to Home Screen".': 'גלולו למטה ובחרו ב־"הוסף למסך הבית".',
+  "Open Smoquit from your Home Screen, then come back to Settings and turn the switch on.":
+    "פתחו את Smoquit ממסך הבית, ואז חזרו להגדרות והדליקו את המתג.",
+  "If you are reading this in Chrome or another browser on your iPhone, open the site in Safari first — Apple only offers this from there.":
+    "אם אתם קוראים את זה בכרום או בדפדפן אחר באייפון, פתחו קודם את האתר בספארי — אפל מציעה את זה רק משם.",
+  "Back to settings": "חזרה להגדרות",
 };

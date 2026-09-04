@@ -105,8 +105,32 @@ for (const needle of [
   "<title>Smoquit",
   'name="description"',
   '<div id="root"></div>',
+  // Without these the app is a web page rather than something installable,
+  // and on iOS installable is the only way push works at all.
+  'rel="manifest"',
+  'rel="apple-touch-icon"',
+  'name="apple-mobile-web-app-capable"',
 ]) {
   check(html.includes(needle), `index.html no longer contains ${needle}`);
+}
+
+// ── The installable-app files are actually on disk ─────────────────────
+// _redirects sends every unmatched path to index.html, so a MISSING sw.js
+// is not a 404 — it is a page of HTML served as JavaScript, and the
+// registration fails with a content-type error that says nothing about the
+// real cause. Cheaper to check here than to debug from a phone.
+for (const name of [
+  "sw.js",
+  "manifest.webmanifest",
+  "icon-192.png",
+  "icon-512.png",
+  "icon-maskable-512.png",
+  "apple-touch-icon.png",
+]) {
+  check(
+    existsSync(join(ROOT, name)),
+    `${name} is missing; the SPA fallback would serve HTML for it`,
+  );
 }
 
 // ── The build did not clobber the runtime files ────────────────────────

@@ -25,6 +25,7 @@ import { buildProfile } from "./domain/profile.js";
 import { startExperiment, stopExperiment } from "./domain/experiments.js";
 import { dayKey as dayKeyOf } from "./lib/dates.js";
 import { migrate } from "./lib/migrate.js";
+import { refreshZone } from "./lib/push.js";
 import * as store from "./lib/store.js";
 import { addCraving, heldOn } from "./domain/cravings.js";
 import { BackdateSheet } from "./sheets/BackdateSheet.jsx";
@@ -38,6 +39,29 @@ import { TipsTab } from "./tabs/TipsTab.jsx";
 import { TodayTab } from "./tabs/TodayTab.jsx";
 import { colors } from "./theme/colors.js";
 import { navStyle, pageStyle, shellStyle, tabStyle } from "./theme/styles.js";
+
+/**
+ * Which tab a notification asked for, if this visit came from one.
+ *
+ * The app has no router — the tab is a piece of state — so sw.js passes it
+ * as a query parameter and this reads it once, at startup. The parameter is
+ * then wiped from the address bar: it describes how this visit began, not
+ * where the person is now, and leaving it there would send them back to the
+ * same tab on every refresh for the rest of the day.
+ *
+ * Anything unrecognised opens Today, which is the right failure. Landing
+ * somewhere odd is worse than landing on the main screen.
+ */
+function openingTab() {
+  try {
+    const asked = new URL(window.location.href).searchParams.get("tab");
+    if (!asked) return "log";
+    window.history.replaceState({}, "", window.location.pathname);
+    return TABS.some((t) => t.id === asked) ? asked : "log";
+  } catch {
+    return "log";
+  }
+}
 
 /**
  * Now, to the minute.
@@ -86,7 +110,7 @@ const SEEN_AFTER_MS = 4000;
 export function AppShell({ user }) {
   useSqLang();
 
-  const [tab, setTab] = React.useState("log");
+  const [tab, setTab] = React.useState(openingTab);
   const [ready, setReady] = React.useState(false);
   const [logs, setLogs] = React.useState({});
   const [goal, setGoal] = React.useState(null);
@@ -192,6 +216,11 @@ export function AppShell({ user }) {
       sqSetLang(saved.lang);
       setSettings(saved);
       setReady(true);
+
+      // People move, and a reminder set for eight in the evening in Tel Aviv
+      // arrives at ten in the morning once they land in California. Writes
+      // only when the zone has actually changed.
+      void refreshZone();
     })();
 
     return stopWatching;

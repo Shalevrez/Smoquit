@@ -7,6 +7,20 @@
     <title>Smoquit — quit smoking, one logged craving at a time</title>
     <meta name="description" content="A quiet companion for putting cigarettes down. Track, notice the pattern, loosen its grip." />
     <!--
+      Installable, which on iOS is not a nicety: Safari only delivers web
+      push to a site that has been added to the Home Screen. These files are
+      served from the repository root and are never generated — see
+      scripts/protected.mjs. The service worker is registered from the
+      bundle rather than from a tag here, so that check-output.mjs's count
+      of plain <script src> tags stays exactly three.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Smoquit" />
+    <!--
       Language, before the first paint. The app keeps the chosen language in
       the user's account, and mirrors it into localStorage — reading it here
       means an RTL page starts out RTL, instead of flipping once the bundle

@@ -10,9 +10,21 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Root } from "./App.jsx";
+import { registerWorker } from "./lib/push.js";
 import "./index.css";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <Root />
   </React.StrictMode>,
 );
+
+// The service worker, registered from here rather than from a tag in
+// index.html — check-output.mjs counts the plain <script src> tags in the
+// output and there are exactly three of them, on purpose.
+//
+// Registering is not the same as asking for permission, and this asks for
+// nothing: no prompt appears, and none ever appears without a tap on the
+// switch in settings. All this buys is that a phone which has already said
+// yes can receive something, and that the worker is in place before anybody
+// goes looking for it.
+registerWorker();

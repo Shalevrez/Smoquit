@@ -89,8 +89,9 @@ const SESSION = {
  * @param {boolean} [opts.signedIn]  false to land on the login screen
  * @param {object|null} [opts.data]  overrides for the three stored rows
  * @param {{google:boolean, apple:boolean}} [opts.providers]
- * @returns {{writes: {key:string, value:any}[], rows: object}} every upsert
- *   the app made, in order, and the current state of the three stored rows.
+ * @returns {{writes: {key:string, value:any}[], rows: object, subscriptions: object[]}}
+ *   every upsert the app made, in order, the current state of the stored
+ *   rows, and any push subscription it registered.
  */
 export async function routeSupabase(page, opts = {}) {
   const signedIn = opts.signedIn ?? true;
@@ -109,6 +110,10 @@ export async function routeSupabase(page, opts = {}) {
   // Returned rather than hung off the page: Playwright's page fixture does
   // not carry ad-hoc properties through to the test.
   const writes = [];
+  // Push subscriptions live in their own table rather than in user_data —
+  // the sender has to read across accounts, which the policies on user_data
+  // exist to prevent. See supabase-schema.sql.
+  const subscriptions = [];
 
   // The client persists its session in localStorage under a key derived
   // from the project ref, and reads it before it ever asks the network.
@@ -140,6 +145,19 @@ export async function routeSupabase(page, opts = {}) {
       if (url.pathname.endsWith("/logout")) return route.fulfill({ status: 204, body: "" });
       return signedIn ? json(SESSION) : json({ session: null, user: null });
     }
+    if (url.pathname === "/rest/v1/push_subscriptions") {
+      if (req.method() === "POST" || req.method() === "PATCH") {
+        for (const row of [].concat(JSON.parse(req.postData() || "{}"))) subscriptions.push(row);
+        return json([], 201);
+      }
+      if (req.method() === "DELETE") {
+        subscriptions.length = 0;
+        return json([], 204);
+      }
+      // The real table grants the browser no select at all, so anything
+      // reaching here is the app asking for something it should not.
+      return json({ message: "permission denied for table push_subscriptions" }, 403);
+    }
     if (url.pathname === "/rest/v1/user_data") {
       if (req.method() === "GET") {
         const key = (url.searchParams.get("key") ?? "").replace(/^eq\./, "");
@@ -163,5 +181,5 @@ export async function routeSupabase(page, opts = {}) {
     return json({}, 200);
   });
 
-  return { writes, rows };
+  return { writes, rows, subscriptions };
 }

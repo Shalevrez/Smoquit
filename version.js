@@ -18,7 +18,7 @@
 //  rebuild — edit, upload, done.
 // ─────────────────────────────────────────────────────────────────────────
 (function () {
-  var VERSION = "1.8.0";
+  var VERSION = "1.9.0";
   var BUILT   = "2026-09-04";
 
   // Readable from the console too: just type SMOQUIT_VERSION.

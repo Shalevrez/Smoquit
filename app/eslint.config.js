@@ -27,6 +27,20 @@ export default [
     },
   },
   {
+    // The sender. Runs on Deno in Supabase rather than in a browser, and is
+    // bundled into supabase-send-alerts.js by scripts/build-edge.mjs.
+    files: ["edge/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: { ...globals.node, Deno: "readonly" },
+    },
+    rules: {
+      "no-undef": "error",
+      "no-unused-vars": ["error", { args: "none" }],
+    },
+  },
+  {
     files: ["scripts/**/*.mjs", "tests/**/*.mjs", "*.config.js"],
     languageOptions: {
       ecmaVersion: 2022,

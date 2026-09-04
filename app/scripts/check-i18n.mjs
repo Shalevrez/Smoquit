@@ -44,6 +44,9 @@ const DYNAMIC = [
   ["domain/alerts.js", "ACTIONS", "values"],
   ["domain/alerts.js", "KIND_LABELS", "values"],
   ["domain/alerts.js", "PREF_LABELS", "values"],
+  // Why the notification switch cannot be turned on, when it cannot. Three
+  // different reasons with three different answers, so three strings.
+  ["lib/push.js", "UNAVAILABLE", "values"],
   ["data/breathing.js", "BREATH_PHASES", ["label"]],
   ["data/countries.js", "COUNTRIES", ["name"]],
   ["data/countries.js", "FALLBACK_COUNTRY", ["name"]],

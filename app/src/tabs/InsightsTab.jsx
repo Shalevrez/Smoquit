@@ -25,7 +25,7 @@ import { HourChart } from "../components/HourChart.jsx";
 import { Stat } from "../components/Stat.jsx";
 import { WeekChart } from "../components/WeekChart.jsx";
 import { countryFor } from "../data/countries.js";
-import { formatHour } from "../domain/insights.js";
+import { formatHour } from "../i18n/format.js";
 import { sqLocale, sqT, useSqLang } from "../i18n/index.js";
 import { colors } from "../theme/colors.js";
 import {

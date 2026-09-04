@@ -40,7 +40,7 @@ async function open(page, opts = {}) {
   if (opts.controlClock) await page.clock.install({ time: NOW });
   else await page.clock.setFixedTime(NOW);
 
-  const { writes } = await routeSupabase(page, opts);
+  const { writes, subscriptions } = await routeSupabase(page, opts);
   await page.addInitScript(
     (l) => window.localStorage.setItem("smoquit.lang", l),
     opts.lang ?? "en",
@@ -55,6 +55,7 @@ async function open(page, opts = {}) {
   return {
     errors,
     writes,
+    subscriptions,
     /**
      * What the app last wrote under this key. Writes are a network round
      * trip, so this is polled rather than read once — asserting straight
@@ -905,7 +906,9 @@ test("the nudge switches are on the settings page and are saved", async ({ page 
   await tab(page, "Settings");
 
   await expect(page.getByText("Nudges")).toBeVisible();
-  await expect(page.getByText(/Nothing is sent to your phone/)).toBeVisible();
+  // The promise this line makes changed when push arrived: it used to say
+  // nothing was ever sent anywhere, and now it says the timed ones can be.
+  await expect(page.getByText(/reach your phone too, even when Smoquit is closed/)).toBeVisible();
 
   await page.getByLabel("When I go over my daily target").uncheck();
   await written("settings").toMatchObject({ alerts: { target: false, reminder: true } });
@@ -927,4 +930,189 @@ test("a nudge reads right-to-left in Hebrew", async ({ page }) => {
   // Hebrew is the right — borderInlineStart, never borderLeft.
   await expect(banner).toHaveCSS("border-left-width", "1px");
   await expect(banner).toHaveCSS("border-right-width", "3px");
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Notifications that reach the phone.
+//
+//  The delivery itself cannot be tested here — that needs a real push
+//  service, a real device and a real account, and it is what the manual
+//  checklist in UPLOAD-ME-README.txt is for. What CAN be tested is
+//  everything on this side of it, and one thing in particular that no
+//  amount of manual testing would reliably catch: that the app never asks
+//  for the notification permission on its own.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** A stand-in for the browser's push machinery, installed before any script. */
+async function stubPushManager(page) {
+  await page.addInitScript(() => {
+    const fake = {
+      endpoint: "https://push.example.test/endpoint/abc123",
+      toJSON: () => ({
+        endpoint: "https://push.example.test/endpoint/abc123",
+        keys: { p256dh: "test-p256dh", auth: "test-auth" },
+      }),
+      unsubscribe: async () => true,
+    };
+    // Chromium has no push service to talk to in a test, so subscribe()
+    // would fail for reasons that have nothing to do with this app.
+    window.__sqSubscribed = false;
+    Object.defineProperty(window, "__sqFakePush", { value: fake });
+    const install = (proto) => {
+      proto.subscribe = async () => {
+        window.__sqSubscribed = true;
+        return fake;
+      };
+      proto.getSubscription = async () => (window.__sqSubscribed ? fake : null);
+    };
+    if (window.PushManager) install(window.PushManager.prototype);
+  });
+}
+
+test("the app is installable: manifest, icons and a worker", async ({ page }) => {
+  await open(page);
+
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    "href",
+    "/manifest.webmanifest",
+  );
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
+
+  // Fetched rather than assumed: _redirects sends unmatched paths to
+  // index.html, so a missing manifest is a page of HTML, not a 404.
+  const manifest = await page.evaluate(async () => {
+    const res = await fetch("/manifest.webmanifest");
+    return { type: res.headers.get("content-type"), body: await res.json() };
+  });
+  expect(manifest.body.name).toBe("Smoquit");
+  expect(manifest.body.display).toBe("standalone");
+  expect(manifest.body.icons.length).toBeGreaterThanOrEqual(2);
+  expect(manifest.body.icons.some((i) => i.purpose === "maskable")).toBe(true);
+
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.getRegistration("/").then(Boolean)))
+    .toBe(true);
+});
+
+test("opening the app never asks for the notification permission", async ({ page }) => {
+  // The one that matters most. A prompt nobody asked for is answered with
+  // Block, Block is close to permanent, and there is then no way back to
+  // this feature for that person on that device.
+  await page.addInitScript(() => {
+    window.__sqAsked = 0;
+    Notification.requestPermission = async () => {
+      window.__sqAsked += 1;
+      return "granted";
+    };
+  });
+  await open(page);
+  await tab(page, "Settings");
+  await expect(page.getByText("Nudges")).toBeVisible();
+
+  expect(await page.evaluate(() => window.__sqAsked)).toBe(0);
+});
+
+test("turning the switch on asks once, and registers the device", async ({ page }) => {
+  // The browser's own permission store is not what is under test here — the
+  // app's flow is. So the answer is stubbed, exactly as the prompt is.
+  await page.addInitScript(() => {
+    window.__sqAsked = 0;
+    window.__sqGranted = "granted";
+    Object.defineProperty(Notification, "permission", { get: () => window.__sqGranted });
+    Notification.requestPermission = async () => {
+      window.__sqAsked += 1;
+      return "granted";
+    };
+  });
+  await stubPushManager(page);
+  const { subscriptions } = await open(page);
+
+  // The key is a runtime file the tests do not ship, so supply one.
+  await page.evaluate(() => {
+    window.SMOQUIT_CONFIG.VAPID_PUBLIC_KEY = "BEl62iUYgUivxIkv69yViEuiBIa1HI0wYQ1S0m-5J5xU";
+  });
+
+  await tab(page, "Settings");
+  // click(), not check(): the box is controlled by whether the browser
+  // actually granted and subscribed, so it flips a moment after the tap
+  // rather than with it, and check() insists on the latter.
+  await page.getByLabel("Send them to my phone").click();
+
+  await expect.poll(() => subscriptions.length).toBeGreaterThan(0);
+  const row = subscriptions[subscriptions.length - 1];
+  expect(row.endpoint).toContain("push.example.test");
+  expect(row.p256dh).toBe("test-p256dh");
+  expect(row.auth).toBe("test-auth");
+  // The zone travels with the subscription. Without it the sender has no
+  // way to know what "eight in the evening" means for this person.
+  expect(row.tz).toBe("Asia/Jerusalem");
+
+  expect(await page.evaluate(() => window.__sqAsked)).toBe(1);
+});
+
+test("a blocked permission says so, instead of failing silently", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Notification, "permission", { get: () => "denied" });
+  });
+  await open(page);
+  await tab(page, "Settings");
+
+  await expect(page.getByText(/Notifications are blocked for this site/)).toBeVisible();
+});
+
+test("on an iPhone the switch explains itself instead of doing nothing", async ({ page }) => {
+  // Safari gives a page no PushManager until the site is on the Home
+  // Screen. Without this screen the switch simply does nothing, and the
+  // honest conclusion is that the feature is broken.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    });
+  });
+  await open(page);
+  await tab(page, "Settings");
+
+  await page.getByText(/Add Smoquit to your Home Screen first/).click();
+  await expect(
+    page.getByRole("heading", { name: "Add Smoquit to your Home Screen" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Scroll down and choose/)).toBeVisible();
+
+  // And it is not a dead end.
+  await page.getByRole("button", { name: "Back to settings" }).click();
+  await expect(page.getByText("Nudges")).toBeVisible();
+});
+
+test("the install instructions read right-to-left in Hebrew", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) Version/17.5 Mobile Safari/604.1",
+    });
+  });
+  await open(page, { lang: "he", data: { settings: { ...SETTINGS, lang: "he" } } });
+  await tab(page, "הגדרות");
+
+  await page.getByText(/הוסיפו קודם את Smoquit/).click();
+  await expect(page.getByRole("heading", { name: "הוסיפו את Smoquit למסך הבית" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+});
+
+test("a notification opens the app on the tab it named, and tidies up after itself", async ({
+  page,
+}) => {
+  // sw.js sends the tab as a query parameter because the app has no router.
+  // It is read once and then wiped: it describes how this visit began, not
+  // where the person is, and leaving it would pin them there on every
+  // refresh for the rest of the day.
+  await open(page, { hash: "?tab=insights" });
+
+  await expect(page.getByText("The last two weeks", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.location.search)).toBe("");
+});
+
+test("a nonsense tab in the address opens the app anyway", async ({ page }) => {
+  await open(page, { hash: "?tab=../../etc/passwd" });
+  await expect(page.getByText("Cigarettes today")).toBeVisible();
 });

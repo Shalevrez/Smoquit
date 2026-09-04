@@ -6,8 +6,8 @@
   "description": "Smoquit \u2014 a quiet companion for putting cigarettes down.",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/clean-assets.mjs && vite build && node scripts/check-output.mjs && node scripts/check-i18n.mjs && eslint .",
-    "check": "node scripts/check-output.mjs && node scripts/check-i18n.mjs",
+    "build": "node scripts/build-edge.mjs && node scripts/clean-assets.mjs && vite build && node scripts/check-output.mjs && node scripts/check-i18n.mjs && eslint .",
+    "check": "node scripts/check-output.mjs && node scripts/check-i18n.mjs && node scripts/check-edge.mjs",
     "preview": "vite preview",
     "lint": "eslint . && prettier --check \"src/**/*.{js,jsx}\"",
     "test": "playwright test",

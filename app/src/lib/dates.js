@@ -13,9 +13,14 @@
 //
 //  Everything downstream — streaks, weekday patterns, any per-day target —
 //  is wrong if this is wrong, so it is one function and only one function.
+//
+//  Nothing here imports anything, and that is deliberate. formatTime used to
+//  live in this file and pulled i18n/index.js in with it, which pulled in
+//  React and a call that touches `document` at import time — so importing a
+//  date helper was enough to make the module unusable outside a browser. It
+//  lives in i18n/format.js now. Keep this file answering only what is true
+//  about a day; what to call it is somebody else's job.
 // ─────────────────────────────────────────────────────────────────────────
-
-import { sqLocale } from "../i18n/index.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -72,6 +77,46 @@ export function atHour(ts, hour) {
 }
 
 /**
+ * How far ahead of UTC a zone is at a given moment, in milliseconds.
+ *
+ * Derived from Intl rather than from a table, so it is right about summer
+ * time, about the half-hour zones (India is +5:30, Nepal +5:45) and about
+ * the fact that the answer changes twice a year. Nothing here guesses.
+ *
+ * This exists for one caller: something running outside the reader's
+ * browser — a server, in UTC — that has to decide whether it is yet eight
+ * in the evening WHERE THEY ARE. Adding this to a timestamp gives a number
+ * whose UTC fields read as that person's local clock, which is exactly what
+ * dayKey(), atHour() and hoursUntilHour() need, because all three only ever
+ * compare a shifted value against another shifted value.
+ */
+export function zoneOffsetMs(timeZone, at = Date.now()) {
+  const when = new Date(at);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(when);
+
+  const field = (type) => Number(parts.find((part) => part.type === type)?.value);
+  const local = Date.UTC(
+    field("year"),
+    field("month") - 1,
+    field("day"),
+    field("hour"),
+    field("minute"),
+    field("second"),
+  );
+  // The seconds are all Intl gives us, so compare like with like.
+  return local - Math.floor(when.getTime() / 1000) * 1000;
+}
+
+/**
  * How many hours from now until the next time the clock reads `hour`.
  *
  * Circular, and that is the whole point: at 22:10, hour 23 is 50 minutes
@@ -85,9 +130,3 @@ export function hoursUntilHour(ts, hour) {
   const now = d.getHours() + d.getMinutes() / 60;
   return (hour - now + 24) % 24;
 }
-
-export const formatTime = (ts) =>
-  new Date(ts).toLocaleTimeString(sqLocale(), {
-    hour: "numeric",
-    minute: "2-digit",
-  });

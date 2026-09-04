@@ -2,11 +2,21 @@
 //  Language, where you are, what you smoke, and what it costs.
 // ─────────────────────────────────────────────────────────────────────────
 
+import React from "react";
+
 import { alertPrefs, PREF_LABELS } from "../domain/alerts.js";
-import { formatHour } from "../domain/insights.js";
+import { formatHour } from "../i18n/format.js";
 import { COUNTRIES, countryFor, detectCountry } from "../data/countries.js";
 import { PRODUCT_TYPE_LABELS } from "../data/products.js";
 import { SQ_LANG, SQ_LANG_OPTIONS, sqSetLang, sqT } from "../i18n/index.js";
+import {
+  disablePush,
+  enablePush,
+  isSubscribed,
+  reasonUnavailable,
+  UNAVAILABLE,
+} from "../lib/push.js";
+import { InstallScreen } from "../screens/InstallScreen.jsx";
 import { deleteAllData } from "../lib/storage.js";
 import { colors } from "../theme/colors.js";
 import {
@@ -15,6 +25,7 @@ import {
   fieldLabelStyle,
   hintStyle,
   inputStyle,
+  linkNoteStyle,
   reasonCardStyle,
 } from "../theme/styles.js";
 const NUDGES = Object.entries(PREF_LABELS);
@@ -22,10 +33,55 @@ const NUDGES = Object.entries(PREF_LABELS);
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 export function SettingsTab({ settings, onChange }) {
+  // Whether this device is subscribed is the browser's answer, not ours, so
+  // it is asked rather than stored — a person can revoke the permission in
+  // their browser settings and never tell us.
+  const [pushOn, setPushOn] = React.useState(false);
+  const [pushBusy, setPushBusy] = React.useState(false);
+  const [pushProblem, setPushProblem] = React.useState(null);
+  const [showInstall, setShowInstall] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    isSubscribed().then((on) => alive && setPushOn(on));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const togglePush = async (wanted) => {
+    setPushBusy(true);
+    setPushProblem(null);
+    try {
+      if (!wanted) {
+        await disablePush();
+        setPushOn(false);
+        return;
+      }
+      const result = await enablePush();
+      if (result.ok) {
+        setPushOn(true);
+        return;
+      }
+      // On iPhone the only useful answer is the instructions, so go
+      // straight there rather than showing a sentence about a switch that
+      // cannot work yet.
+      if (result.reason === "ios-install") setShowInstall(true);
+      else setPushProblem(result.reason);
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  // Hooks first, always — this screen is rendered before the account's
+  // settings have arrived from the network.
   if (!settings) return null;
+  if (showInstall) return <InstallScreen onBack={() => setShowInstall(false)} />;
+
   // Defaults are filled in on the way out rather than written on the way in,
   // so an account made before this feature existed needs no migration.
-  const prefs = alertPrefs(settings),
+  const blockedBecause = reasonUnavailable(),
+    prefs = alertPrefs(settings),
     setPref = (changes) => onChange({ alerts: { ...prefs, ...changes } }),
     country = countryFor(settings.country),
     detectedCountry = detectCountry(),
@@ -224,9 +280,59 @@ export function SettingsTab({ settings, onChange }) {
         */}
         <p style={{ ...hintStyle, marginTop: 0, marginBottom: 12 }}>
           {sqT(
-            "These appear at the top of the app while you have it open. Nothing is sent to your phone.",
+            "These appear at the top of the app. Turn on notifications below and the timed ones reach your phone too, even when Smoquit is closed.",
           )}
         </p>
+
+        {/*
+          The switch that asks the browser for permission. It is first
+          because it answers a different question from the four below it:
+          this one is WHERE they arrive, those are WHICH ones you want.
+        */}
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            fontSize: 14,
+            color: colors.smoke,
+            padding: "9px 12px",
+            marginBottom: 10,
+            borderRadius: 10,
+            background: colors.breath,
+            border: `1px solid ${colors.line}`,
+            cursor: pushBusy ? "progress" : "pointer",
+            opacity: pushBusy ? 0.6 : 1,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={pushOn}
+            disabled={pushBusy}
+            onChange={(event) => togglePush(event.target.checked)}
+            style={{ width: 17, height: 17, accentColor: colors.ember, flexShrink: 0 }}
+          />
+          <span style={{ fontWeight: 600 }}>{sqT("Send them to my phone")}</span>
+        </label>
+
+        {/*
+          Why it cannot be turned on, when it cannot — each with its own
+          answer, because "notifications unavailable" leaves somebody with
+          nothing to do about it.
+        */}
+        {!pushOn && blockedBecause === "ios-install" && (
+          <button
+            className="sq-btn"
+            onClick={() => setShowInstall(true)}
+            style={{ ...hintStyle, ...linkNoteStyle }}
+          >
+            {sqT(UNAVAILABLE["ios-install"])}
+          </button>
+        )}
+        {!pushOn && blockedBecause && blockedBecause !== "ios-install" && (
+          <div style={hintStyle}>{sqT(UNAVAILABLE[blockedBecause])}</div>
+        )}
+        {pushProblem && <div style={hintStyle}>{sqT(UNAVAILABLE[pushProblem])}</div>}
 
         {NUDGES.map(([id, label]) => (
           <label
