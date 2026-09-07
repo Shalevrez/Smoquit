@@ -32,5 +32,5 @@ window.SMOQUIT_CONFIG = {
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6emRteGl5a2JydndseWltYWd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDY3MTgsImV4cCI6MjEwMzY4MjcxOH0.dPVXTj8MshX7uwWz3q1AxkWz6eg76jjIVYh_QSuOnBI",
 
   // Public half only. Empty is fine — see the note above.
-  VAPID_PUBLIC_KEY: "",
+  VAPID_PUBLIC_KEY: "BHOvbuBunQ51wj-wxDPjgcs6eETfucstPbwFT3d1iVS-3kLgaEIFX5wasv_acXIVlaPzatDeM_zC6vZOO2pbfmE",
 };
