@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8542B"/>
+      <stop offset="1" stop-color="#B93714"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F2E5D9"/>
+    </linearGradient>
+    <clipPath id="above"><rect x="0" y="0" width="512" height="444"/></clipPath>
+    <!-- Both line gradients are in user space: a horizontal line has a
+         zero-height bounding box, and an objectBoundingBox gradient on one
+         renders as nothing at all. -->
+    <linearGradient id="horizon" gradientUnits="userSpaceOnUse" x1="112" y1="0" x2="400" y2="0">
+      <stop offset="0"   stop-color="#FFE6D6" stop-opacity="0"/>
+      <stop offset=".3"  stop-color="#FFE6D6" stop-opacity=".95"/>
+      <stop offset=".7"  stop-color="#FFE6D6" stop-opacity=".95"/>
+      <stop offset="1"   stop-color="#FFE6D6" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="smoke" gradientUnits="userSpaceOnUse"
+                    x1="0" y1="314" x2="0" y2="114">
+      <stop offset="0"   stop-color="#FFFFFF" stop-opacity=".95"/>
+      <stop offset=".38" stop-color="#FFFFFF" stop-opacity=".78"/>
+      <stop offset=".72" stop-color="#FFFFFF" stop-opacity=".38"/>
+      <stop offset="1"   stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g transform="translate(51.2 51.2) scale(0.8)">
+    <path d="M247.3 313.2 A50 50 0 1 0 256 214 A50 50 0 1 1 294.3 131.9" fill="none" stroke="url(#smoke)" stroke-width="24" stroke-linecap="round"/>
+    <circle cx="256" cy="410" r="76" fill="url(#sun)" clip-path="url(#above)"/>
+    <path d="M112 444 H400" stroke="url(#horizon)" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>
