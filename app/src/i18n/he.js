@@ -91,6 +91,8 @@ export const SQ_HE = {
   "What's driving it?": "מה מניע את זה?",
   "It passed": "עבר לי",
   "I smoked one anyway": "עישנתי בכל זאת",
+  "Rode it out": "ויתרתי עליה",
+  "Rode it out · {trigger}": "‏ויתרתי עליה · {trigger}",
   "Today's timeline": "ציר הזמן של היום",
   "Nothing logged yet today. If a craving comes, try waiting it out — most pass in 3–5 minutes. If you do smoke, tap the button above so you can see your own pattern later.":
     "עדיין לא תועד כלום היום. אם עולה דחף, נסו לחכות שיחלוף — רובם עוברים תוך 3–5 דקות. אם בכל זאת עישנתם, לחצו על הכפתור למעלה כדי שתוכלו לראות בהמשך את הדפוס שלכם.",

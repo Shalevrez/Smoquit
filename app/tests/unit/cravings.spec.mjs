@@ -7,7 +7,13 @@
 // ─────────────────────────────────────────────────────────────────────────
 import { test, expect } from "@playwright/test";
 
-import { addCraving, heldOn, summarise, WAVE_MS } from "../../src/domain/cravings.js";
+import {
+  addCraving,
+  heldEntriesOn,
+  heldOn,
+  summarise,
+  WAVE_MS,
+} from "../../src/domain/cravings.js";
 import { swapForTrigger, TRIGGER_TO_CUE } from "../../src/data/habits.js";
 import { TRIGGERS } from "../../src/data/triggers.js";
 import { breathPhaseAt, BREATH_CYCLE_MS, BREATH_PHASES } from "../../src/data/breathing.js";
@@ -46,6 +52,19 @@ test("only the ones ridden out are counted as ridden out", () => {
   expect(heldOn(cravings, "2026-08-31")).toBe(2);
   expect(heldOn(cravings, "2026-08-30")).toBe(0);
   expect(heldOn({}, "2026-08-31")).toBe(0);
+});
+
+test("the timeline is handed the sessions themselves, in the order they happened", () => {
+  const cravings = {
+    "2026-08-31": [session(31, 8, "held"), session(31, 12, "smoked"), session(31, 18, "held")],
+  };
+  // The ones given in to are left out on purpose: those become a cigarette in
+  // the log, and a timeline showing both would count the day twice.
+  expect(heldEntriesOn(cravings, "2026-08-31").map((s) => s.ts)).toEqual([at(31, 8), at(31, 18)]);
+  expect(heldEntriesOn(cravings, "2026-08-30")).toEqual([]);
+  expect(heldEntriesOn({}, "2026-08-31")).toEqual([]);
+  // The number on the screen is the length of the list under it, always.
+  expect(heldOn(cravings, "2026-08-31")).toBe(heldEntriesOn(cravings, "2026-08-31").length);
 });
 
 test("a summary reports both halves, not just the good one", () => {

@@ -137,6 +137,24 @@ export const triggerChipStyle = {
   padding: "3px 10px",
   flex: 1,
 };
+// A craving that was ridden out, in among the cigarettes. Filled rather than
+// ruled, so a win is visible at a glance in a list of admissions — but in the
+// faintest moss there is, because the button that produced it is already moss
+// and the row should not shout over it.
+export const heldRowStyle = {
+  ...timelineRowStyle,
+  background: colors.mossFaint,
+  borderRadius: 8,
+  padding: "12px 8px",
+};
+// Unfilled, so the row's own green stays the only green surface here.
+export const heldChipStyle = {
+  ...triggerChipStyle,
+  background: "none",
+  border: `1px solid ${colors.mossSoft}`,
+  color: colors.moss,
+  fontWeight: 600,
+};
 export const undoButtonStyle = {
   background: "none",
   border: "none",
