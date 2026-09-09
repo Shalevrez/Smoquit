@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "./serve.mjs";
-import { routeSupabase, NOW, LOGS, GOAL, SETTINGS, SUPABASE_HOST } from "./fixtures.mjs";
+import { routeSupabase, NOW, CRAVINGS, LOGS, GOAL, SETTINGS, SUPABASE_HOST } from "./fixtures.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PORT = 5010;
@@ -463,6 +463,71 @@ test("riding out a craving is recorded as a win, and costs no cigarette", async 
   // Nothing was smoked, so nothing was logged.
   expect(writes.map((w) => w.key)).not.toContain("logs");
   await expect(page.getByText("1 craving ridden out today")).toBeVisible();
+});
+
+test("a craving ridden out earns a row in the timeline, and no undo", async ({ page }) => {
+  await open(page);
+
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await page.getByRole("button", { name: "Stress", exact: true }).click();
+  await page.getByRole("button", { name: "It passed" }).click();
+
+  // 12:00, so it lands above today's 08:20 and 11:30 cigarettes.
+  const rows = page.locator("ul li");
+  await expect(rows).toHaveCount(LOGS["2026-08-31"].length + 1);
+  await expect(rows.first()).toContainText("Rode it out · Stress");
+  // Nothing to take back: a craving has no tombstone and no delete path, so
+  // only the cigarettes carry an undo.
+  await expect(rows.first().getByRole("button")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remove this entry" })).toHaveCount(
+    LOGS["2026-08-31"].length,
+  );
+  // And it is still not a cigarette.
+  await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
+});
+
+test("a craving with no trigger named says only that it passed", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await page.getByRole("button", { name: "It passed" }).click();
+  await expect(page.locator("ul li").first()).toContainText("Rode it out");
+  await expect(page.locator("ul li").first()).not.toContainText("·");
+});
+
+test("a day of nothing but urges ridden out is not an empty day", async ({ page }) => {
+  await open(page, {
+    data: {
+      logs: { ...LOGS, "2026-08-31": [] },
+      cravings: {
+        ...CRAVINGS,
+        "2026-08-31": [
+          {
+            ts: new Date("2026-08-31T09:00:00+03:00").getTime(),
+            trigger: "Coffee",
+            outcome: "held",
+            heldMs: 5 * 60 * 1000,
+          },
+        ],
+      },
+    },
+  });
+
+  await expect(page.getByText("Nothing logged yet today")).toHaveCount(0);
+  await expect(page.locator("ul li")).toContainText(["Rode it out · Coffee"]);
+});
+
+test("giving in leaves one row, not two", async ({ page }) => {
+  await open(page);
+
+  await page.getByRole("button", { name: "I want one right now" }).click();
+  await page.getByRole("button", { name: "Coffee", exact: true }).click();
+  await page.getByRole("button", { name: "I smoked one anyway" }).click();
+  await page.getByRole("button", { name: "Keep current time" }).click();
+
+  // The craving became a cigarette. Listing the urge as well would make the
+  // day read as one more event than actually happened.
+  await expect(page.getByText("Rode it out")).toHaveCount(0);
+  await expect(page.locator("ul li")).toHaveCount(LOGS["2026-08-31"].length + 1);
 });
 
 test("a craving can be ridden out without naming what caused it", async ({ page }) => {

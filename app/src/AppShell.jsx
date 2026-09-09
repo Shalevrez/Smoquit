@@ -27,7 +27,7 @@ import { dayKey as dayKeyOf } from "./lib/dates.js";
 import { migrate } from "./lib/migrate.js";
 import { refreshZone } from "./lib/push.js";
 import * as store from "./lib/store.js";
-import { addCraving, heldOn } from "./domain/cravings.js";
+import { addCraving, heldEntriesOn } from "./domain/cravings.js";
 import { BackdateSheet } from "./sheets/BackdateSheet.jsx";
 import { CravingSheet } from "./sheets/CravingSheet.jsx";
 import { TriggerSheet } from "./sheets/TriggerSheet.jsx";
@@ -240,6 +240,7 @@ export function AppShell({ user }) {
   const nowTick = useMinute();
   const dayKey = React.useMemo(() => dayKeyOf(nowTick), [nowTick]);
   const todayLogs = entriesOn(logs, dayKey);
+  const todayHeld = React.useMemo(() => heldEntriesOn(cravings, dayKey), [cravings, dayKey]);
 
   // Every write below rewrites the whole logs blob, because that is what a
   // single jsonb row is. Fine at the scale one person can smoke.
@@ -483,7 +484,7 @@ export function AppShell({ user }) {
               onAsk={() => setAskingTrigger(true)}
               onRemove={removeLog}
               onRideItOut={() => setRidingOut(true)}
-              heldToday={heldOn(cravings, dayKey)}
+              todayHeld={todayHeld}
               onNoneToday={markNoneToday}
               markedNoneToday={Array.isArray(logs[dayKey]) && todayLogs.length === 0}
             />

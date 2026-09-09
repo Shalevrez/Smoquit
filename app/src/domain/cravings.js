@@ -35,9 +35,13 @@ export function addCraving(cravings, session) {
 
 const on = (cravings, key) => cravings?.[key] ?? [];
 
-/** How many urges were ridden out on one day. */
-export const heldOn = (cravings, key) =>
-  on(cravings, key).filter((c) => c.outcome === "held").length;
+/** The urges ridden out on one day, oldest first, as addCraving files them. */
+export const heldEntriesOn = (cravings, key) =>
+  on(cravings, key).filter((c) => c.outcome === "held");
+
+/** How many urges were ridden out on one day. Derived from the list above so
+ *  the number on the screen and the rows under it can never disagree. */
+export const heldOn = (cravings, key) => heldEntriesOn(cravings, key).length;
 
 /**
  * Held, faced, and the share of one from the other, over a window of days.

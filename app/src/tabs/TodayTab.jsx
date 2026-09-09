@@ -14,6 +14,8 @@ import {
   bigNumberStyle,
   counterCardStyle,
   emptyBoxStyle,
+  heldChipStyle,
+  heldRowStyle,
   primaryButtonStyle,
   sectionHeadingStyle,
   timelineRowStyle,
@@ -27,7 +29,7 @@ export function TodayTab({
   onAsk,
   onRemove,
   onRideItOut,
-  heldToday,
+  todayHeld,
   onNoneToday,
   markedNoneToday,
 }) {
@@ -42,6 +44,22 @@ export function TodayTab({
       () => (goal?.baseline ? avoidedOn(count, goal.baseline) * pricePerCigarette(settings) : null),
       [goal, count, settings],
     );
+  // One timeline, both halves of the story: the cigarettes and the cravings
+  // that did not become one. Interleaved by when they happened, newest first.
+  // A craving that was given in to is NOT here — that hands over to addLog and
+  // is already in todayLogs, and listing it twice would make the day look
+  // worse than it was.
+  //
+  // onRemove takes an entry's real index in the stored array, so carry it
+  // along before the sort moves everything around.
+  const rows = React.useMemo(
+    () =>
+      [
+        ...todayLogs.map((entry, index) => ({ kind: "log", ts: entry.ts, entry, index })),
+        ...todayHeld.map((session) => ({ kind: "held", ts: session.ts, session })),
+      ].sort((a, b) => b.ts - a.ts),
+    [todayLogs, todayHeld],
+  );
   return (
     <div>
       <div style={counterCardStyle}>
@@ -136,7 +154,7 @@ export function TodayTab({
         >
           {sqT("Logging honestly is how the insights get useful.")}
         </div>
-        {heldToday > 0 && (
+        {todayHeld.length > 0 && (
           <div
             style={{
               fontSize: 13,
@@ -145,9 +163,9 @@ export function TodayTab({
               fontWeight: 600,
             }}
           >
-            {heldToday === 1
+            {todayHeld.length === 1
               ? sqT("1 craving ridden out today")
-              : sqT("{n} cravings ridden out today", { n: heldToday })}
+              : sqT("{n} cravings ridden out today", { n: todayHeld.length })}
           </div>
         )}
         {/*
@@ -179,7 +197,7 @@ export function TodayTab({
         )}
       </div>
       <h3 style={sectionHeadingStyle}>{sqT("Today's timeline")}</h3>
-      {count === 0 ? (
+      {rows.length === 0 ? (
         <div style={emptyBoxStyle}>
           {sqT(
             "Nothing logged yet today. If a craving comes, try waiting it out — most pass in 3–5 minutes. If you do smoke, tap the button above so you can see your own pattern later.",
@@ -194,14 +212,12 @@ export function TodayTab({
           }}
         >
           {/*
-            Newest first on screen, but onRemove takes the entry's real
-            index in the stored array — so carry it along before reversing.
+            Keys are prefixed by kind: a craving and the cigarette that ended
+            it can land on the same millisecond.
           */}
-          {todayLogs
-            .map((entry, index) => ({ ...entry, index }))
-            .reverse()
-            .map((entry) => (
-              <li key={entry.ts} style={timelineRowStyle}>
+          {rows.map((row) =>
+            row.kind === "log" ? (
+              <li key={`l${row.ts}`} style={timelineRowStyle}>
                 <span
                   style={{
                     fontVariantNumeric: "tabular-nums",
@@ -209,19 +225,41 @@ export function TodayTab({
                     fontWeight: 600,
                   }}
                 >
-                  {formatTime(entry.ts)}
+                  {formatTime(row.ts)}
                 </span>
-                <span style={triggerChipStyle}>{sqT(entry.trigger)}</span>
+                <span style={triggerChipStyle}>{sqT(row.entry.trigger)}</span>
                 <button
                   className="sq-btn"
-                  onClick={() => onRemove(entry.index)}
+                  onClick={() => onRemove(row.index)}
                   style={undoButtonStyle}
                   aria-label={sqT("Remove this entry")}
                 >
                   {sqT("Undo")}
                 </button>
               </li>
-            ))}
+            ) : (
+              /*
+                No Undo. A craving is immutable by design — there are no
+                tombstones in the cravings blob and nothing to undo one with.
+              */
+              <li key={`h${row.ts}`} style={heldRowStyle}>
+                <span
+                  style={{
+                    fontVariantNumeric: "tabular-nums",
+                    color: colors.moss,
+                    fontWeight: 600,
+                  }}
+                >
+                  {formatTime(row.ts)}
+                </span>
+                <span style={heldChipStyle}>
+                  {row.session.trigger
+                    ? sqT("Rode it out · {trigger}", { trigger: sqT(row.session.trigger) })
+                    : sqT("Rode it out")}
+                </span>
+              </li>
+            ),
+          )}
         </ul>
       )}
     </div>

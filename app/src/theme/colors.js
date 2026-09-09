@@ -18,5 +18,8 @@ export const colors = {
   emberSoft: "#F6C9B8",
   moss: "#5C7457",
   mossSoft: "#D6E0D0",
+  // Deliberately lighter than mossSoft: it fills whole rows, and it must
+  // stay quieter than the moss-soft button that produces them.
+  mossFaint: "#EBF1E7",
   line: "#E3DFD5",
 };
